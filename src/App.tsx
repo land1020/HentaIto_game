@@ -44,7 +44,8 @@ function App() {
   const [usedThemeTexts, setUsedThemeTexts] = useState<Set<string>>(new Set());
 
   // Results Data
-  const [allGuesses, setAllGuesses] = useState<Record<string, Record<string, number>>>({});
+  const [allGuesses, setAllGuesses] = useState<Record<string, Record<string, number>>>({}); // guesserId -> { targetId -> value }
+  const [discussionVoted, setDiscussionVoted] = useState<Record<string, boolean>>({}); // playerId -> true
   const [roundResults, setRoundResults] = useState<any[]>([]);
   const [gameHistory, setGameHistory] = useState<RoundResult[][]>([]); // Full history
 
@@ -84,11 +85,12 @@ function App() {
     // Reconstruct Set from array
     setUsedThemeTexts(new Set(newState.usedThemeTexts || []));
     setAllGuesses(newState.allGuesses || {});
+    setDiscussionVoted(newState.discussionVoted || {});
     setRoundResults(newState.roundResults || []);
     setGameHistory(newState.gameHistory || []);
   };
 
-  const { isHost, syncState, syncMyPlayer, submitMyGuess, submitSharedMemo } = useGameSync({
+  const { isHost, syncState, syncMyPlayer, submitMyGuess, submitSharedMemo, submitDiscussionDone } = useGameSync({
     roomId: roomId || null,
     myPlayerId: myPlayerId || null,
     onStateChange: handleOnlineStateChange
@@ -101,28 +103,22 @@ function App() {
     if (roomId && isHost) {
       const allVoted = players.length > 0 && Object.keys(allGuesses).length === players.length;
 
-      if (allVoted) {
-        if (currentPhase === 'GAME') {
-          if (gameSettings.isDiscussionEnabled) {
-            // If not already moving, move to DISCUSSION
-            // Add a small delay for UX? Or just go.
-            updateGameFn({ phase: 'DISCUSSION' });
-          } else {
-            // Go to RESULT immediately
-            // We need to calculate results on Host and sync them
-            // But calculateAndShowResults uses local state setter. 
-            // We should adapt it or call it, then it calls updateGameFn inside?
-            // Wait... calculateAndShowResults calls setRoundResults, setGameHistory, setPlayers locally.
-            // We need an online version of calculateAndShowResults.
+      if (allVoted && currentPhase === 'GAME') {
+        if (gameSettings.isDiscussionEnabled) {
+          updateGameFn({ phase: 'DISCUSSION', discussionVoted: {} });
+        } else {
+          calculateAndShowResults(allGuesses);
+        }
+      }
 
-            // Let's refactor calculateAndShowResults to RETURN data, then we use updateGameFn.
-            // Or just modify 'calculateAndShowResults' to handle online check inside.
-            calculateAndShowResults(allGuesses);
-          }
+      if (currentPhase === 'DISCUSSION') {
+        const allDiscussed = players.length > 0 && Object.keys(discussionVoted).length === players.length;
+        if (allDiscussed) {
+          calculateAndShowResults(allGuesses);
         }
       }
     }
-  }, [roomId, isHost, currentPhase, allGuesses, players.length, gameSettings.isDiscussionEnabled]);
+  }, [roomId, isHost, currentPhase, allGuesses, discussionVoted, players.length, gameSettings.isDiscussionEnabled]);
 
 
   // --- Handlers ---
@@ -168,10 +164,10 @@ function App() {
   const calculateTitle = (score: number) => {
     const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
     if (score >= 0) return pick(WinnerWords);
-    if (score <= -120) return pick(DecoratorWords) + pick(DangerWords);
-    if (score <= -90) return pick(DangerWords);
-    if (score <= -60) return pick(AbnormalWords);
-    if (score <= -30) return pick(NormalWords);
+    if (score <= -160) return pick(DecoratorWords) + pick(DangerWords);
+    if (score <= -120) return pick(DangerWords);
+    if (score <= -80) return pick(AbnormalWords);
+    if (score <= -40) return pick(NormalWords);
     return pick(NormalWords);
   };
 
@@ -660,6 +656,10 @@ function App() {
       for (const [targetId, val] of Object.entries(myPlacements)) {
         await submitMyGuess(targetId, val);
       }
+      // If discussion, mark done
+      if (currentPhase === 'DISCUSSION') {
+        await submitDiscussionDone();
+      }
 
       // Handle phase transitions
       if (currentPhase === 'DISCUSSION') {
@@ -935,6 +935,7 @@ function App() {
           sharedMemos={sharedMemos}
           onUpdateMemo={handleUpdateMemo}
           isHost={amIHost}
+          discussionVoted={discussionVoted}
         />
       );
     case 'RESULT':

@@ -14,6 +14,7 @@ export interface GameState {
     usedThemeTexts: string[]; // Store as array for DB
     sharedMemos: Record<string, string>;
     allGuesses: Record<string, Record<string, number>>;
+    discussionVoted?: Record<string, boolean>;
     roundResults: any[];
     gameHistory: RoundResult[][];
     lastUpdated: number;
@@ -144,4 +145,9 @@ export const submitGuess = async (roomId: string, guesserId: string, targetId: s
 export const submitMemo = async (roomId: string, playerId: string, memo: string) => {
     const path = `rooms/${roomId}/sharedMemos`;
     await update(ref(database, path), { [playerId]: memo });
+};
+
+export const submitDiscussionCompletion = async (roomId: string, playerId: string) => {
+    const path = `rooms/${roomId}/discussionVoted`;
+    await update(ref(database, path), { [playerId]: true });
 };

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { subscribeToRoom, updateGameState, updatePlayer, type GameState, submitGuess, submitMemo } from '../services/gameService';
+import { subscribeToRoom, updateGameState, updatePlayer, type GameState, submitGuess, submitMemo, submitDiscussionCompletion } from '../services/gameService';
 import type { Player } from '../types/game';
 
 interface UseGameSyncProps {
@@ -58,11 +58,17 @@ export const useGameSync = ({ roomId, myPlayerId, onStateChange }: UseGameSyncPr
         await submitMemo(roomId, targetId, memo);
     };
 
+    const submitDiscussionDone = async () => {
+        if (!roomId || !myPlayerId) return;
+        await submitDiscussionCompletion(roomId, myPlayerId);
+    };
+
     return {
         isHost,
         syncState,
         syncMyPlayer,
         submitMyGuess,
-        submitSharedMemo
+        submitSharedMemo,
+        submitDiscussionDone
     };
 };

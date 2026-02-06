@@ -15,6 +15,7 @@ interface GameScreenProps {
     sharedMemos?: Record<string, string>;
     onUpdateMemo?: (id: string, text: string) => void;
     isHost?: boolean;
+    discussionVoted?: Record<string, boolean>;
 }
 
 export const GameScreen: React.FC<GameScreenProps> = ({
@@ -28,7 +29,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     allGuesses = {},
     sharedMemos = {},
     onUpdateMemo,
-    isHost = false
+    isHost = false,
+    discussionVoted = {}
 }) => {
     const myPlayer = players.find(p => p.id === myId);
     const otherPlayers = players.filter(p => p.id !== myId);
@@ -99,13 +101,24 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         }
     }, [sharedMemos, myId]);
 
+    // Reset local vote flag when phase changes (e.g. GAME -> DISCUSSION)
+    useEffect(() => {
+        setHasVoted(false);
+    }, [phase]);
+
     // State for local voted indicator
     const [hasVoted, setHasVoted] = useState(false);
 
     // Calculate voting status
-    const votedCount = Object.keys(allGuesses).length;
+    const votedCount = phase === 'DISCUSSION'
+        ? Object.keys(discussionVoted).length
+        : Object.keys(allGuesses).length;
     const totalPlayers = players.length;
-    const hasIVoted = allGuesses[myId] !== undefined || hasVoted;
+
+    // Check if I have voted based on phase
+    const hasIVoted = phase === 'DISCUSSION'
+        ? discussionVoted[myId] !== undefined || hasVoted // Local hasVoted flag or server data
+        : allGuesses[myId] !== undefined || hasVoted;
 
     const handleSubmit = () => {
         // Check if all others are placed
