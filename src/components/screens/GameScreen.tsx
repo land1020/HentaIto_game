@@ -8,7 +8,7 @@ interface GameScreenProps {
     myId: string;
     theme: Theme;
     onVote: (placements: Record<string, number>, myWord: string) => void;
-    // isDiscussion removed as it is handled by phase
+    onLeave: () => void;
     phase?: 'GAME' | 'DISCUSSION';
     allGuesses?: Record<string, Record<string, number>>;
     sharedMemos?: Record<string, string>;
@@ -20,7 +20,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     myId,
     theme,
     onVote,
-    // isDiscussion removed
+    onLeave,
     phase = 'GAME',
     allGuesses = {},
     sharedMemos = {},
@@ -125,40 +125,89 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         <div className="container">
             <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
                 {phase === 'DISCUSSION' && (
-                    <div className="badge-animation" style={{
+                    <div style={{
                         display: 'inline-block',
-                        background: '#FF4081',
+                        background: 'linear-gradient(135deg, #FF4081 0%, #F50057 100%)',
                         color: 'white',
-                        padding: '4px 12px',
-                        borderRadius: '20px',
+                        padding: '8px 20px',
+                        borderRadius: '25px',
                         fontWeight: 'bold',
-                        fontSize: '0.9rem',
-                        marginBottom: '8px',
-                        boxShadow: '0 2px 5px rgba(255, 64, 129, 0.4)'
+                        fontSize: '1rem',
+                        marginBottom: '12px',
+                        boxShadow: '0 4px 15px rgba(255, 64, 129, 0.4)',
+                        border: '2px solid white',
+                        textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
                     }}>
-                        議論中：再調整チャンス（1回のみ）
+                        🗣️ 議論中：再調整チャンス（1回のみ）
                     </div>
                 )}
-                <h2 style={{ color: 'var(--color-primary)', fontSize: '1.5rem', margin: '0 0 0.5rem 0' }}>お題: {theme.text}</h2>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#666', fontSize: '0.9rem' }}>
-                    <span>1: {themeMin}</span>
-                    <span>100: {themeMax}</span>
+                <div style={{
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    padding: '12px 20px',
+                    borderRadius: '16px',
+                    marginBottom: '8px',
+                    boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)'
+                }}>
+                    <h2 style={{
+                        color: 'white',
+                        fontSize: '1.4rem',
+                        margin: 0,
+                        textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
+                    }}>
+                        📝 お題: {theme.text}
+                    </h2>
+                </div>
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    color: '#444',
+                    fontSize: '0.9rem',
+                    background: 'rgba(255,255,255,0.8)',
+                    padding: '8px 16px',
+                    borderRadius: '8px'
+                }}>
+                    <span>1️⃣ {themeMin}</span>
+                    <span>💯 {themeMax}</span>
                 </div>
             </div>
 
-            {/* My Info */}
-            <div style={{ background: 'var(--color-bg)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '2px solid var(--color-primary)', marginBottom: '1.5rem' }}>
+            {/* My Info - with player color */}
+            <div style={{
+                background: `linear-gradient(135deg, ${myPlayer.color}22 0%, ${myPlayer.color}44 100%)`,
+                padding: '1rem',
+                borderRadius: 'var(--radius-md)',
+                border: `3px solid ${myPlayer.color}`,
+                marginBottom: '1.5rem',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+            }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <span style={{ fontWeight: 'bold' }}>
-                        {myPlayer.title && myPlayer.title !== '新人' ? `${myPlayer.title} ${myPlayer.name}` : myPlayer.name}
-                    </span>
-                    <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-primary)' }}>{myPlayer.targetNumber}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '50%',
+                            background: myPlayer.color,
+                            border: '2px solid white',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                        }}></div>
+                        <span style={{ fontWeight: 'bold' }}>
+                            {myPlayer.title && myPlayer.title !== '新人' ? `${myPlayer.title} ${myPlayer.name}` : myPlayer.name}
+                        </span>
+                        <span style={{ fontSize: '0.7rem', background: '#4CAF50', color: 'white', padding: '2px 6px', borderRadius: '8px' }}>あなた</span>
+                    </div>
+                    <span style={{
+                        fontSize: '1.8rem',
+                        fontWeight: 'bold',
+                        color: myPlayer.color,
+                        textShadow: '1px 1px 2px rgba(0,0,0,0.2)'
+                    }}>{myPlayer.targetNumber}</span>
                 </div>
                 <input
                     className="input-field"
                     placeholder="数字に合う言葉を入力 (メモ)"
                     value={myWord}
                     onChange={handleMyWordChange}
+                    style={{ marginBottom: 0 }}
                 />
             </div>
 
@@ -183,42 +232,60 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                                 style={{
                                     display: 'flex',
                                     flexDirection: 'column',
-                                    padding: '0.5rem',
-                                    background: isSelected ? '#fff' : '#f9f9f9',
-                                    border: isSelected ? `2px solid ${p.color}` : '1px solid #ddd',
+                                    padding: '0.6rem',
+                                    background: isSelected
+                                        ? `linear-gradient(135deg, ${p.color}33 0%, ${p.color}55 100%)`
+                                        : `linear-gradient(135deg, ${p.color}11 0%, ${p.color}22 100%)`,
+                                    border: isSelected ? `3px solid ${p.color}` : `2px solid ${p.color}66`,
                                     borderRadius: 'var(--radius-sm)',
-                                    boxShadow: isSelected ? 'var(--shadow-pop)' : 'none',
-                                    marginBottom: '0.5rem',
+                                    boxShadow: isSelected ? `0 4px 12px ${p.color}44` : '0 2px 4px rgba(0,0,0,0.1)',
                                     position: 'relative',
-                                    textAlign: 'left'
+                                    textAlign: 'left',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
                                 }}
                             >
-                                <div style={{ display: 'flex', alignItems: 'center', width: '100%', marginBottom: '4px' }}>
-                                    <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: p.color, marginRight: '4px' }}></div>
-                                    <span style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', width: '100%', marginBottom: '6px' }}>
+                                    <div style={{
+                                        width: '16px',
+                                        height: '16px',
+                                        borderRadius: '50%',
+                                        background: p.color,
+                                        marginRight: '6px',
+                                        border: '2px solid white',
+                                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                                    }}></div>
+                                    <span style={{ fontWeight: 'bold', fontSize: '0.85rem', flex: 1 }}>
                                         {p.title && p.title !== '新人' ? `${p.title} ${p.name}` : p.name}
                                     </span>
-                                    {isPlaced && !phase && <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'green' }}>✓ {placements[p.id]}</span>}
-                                    {isPlaced && phase === 'DISCUSSION' && <span style={{ marginLeft: 'auto', fontSize: '1rem', fontWeight: 'bold', color: 'green' }}>✓ {placements[p.id]}</span>}
+                                    {isPlaced && (
+                                        <span style={{
+                                            fontSize: '0.9rem',
+                                            fontWeight: 'bold',
+                                            color: 'white',
+                                            background: '#4CAF50',
+                                            padding: '2px 8px',
+                                            borderRadius: '10px'
+                                        }}>✓ {placements[p.id]}</span>
+                                    )}
                                 </div>
 
-                                <div style={{ width: '100%', borderTop: '1px dashed #ccc', paddingTop: '4px' }}>
-                                    <input
-                                        className="input-field"
-                                        style={{
-                                            fontSize: '0.8rem',
-                                            padding: '4px',
-                                            margin: '0 0 4px 0',
-                                            width: '100%',
-                                            boxSizing: 'border-box',
-                                            background: 'rgba(255,255,255,0.5)'
-                                        }}
-                                        placeholder="(メモ)"
-                                        value={sharedMemos?.[p.id] || ''}
-                                        onChange={(e) => onUpdateMemo?.(p.id, e.target.value)}
-                                        onClick={(e) => e.stopPropagation()}
-                                    />
-                                </div>
+                                <input
+                                    className="input-field"
+                                    style={{
+                                        fontSize: '0.8rem',
+                                        padding: '6px 8px',
+                                        margin: 0,
+                                        width: '100%',
+                                        boxSizing: 'border-box',
+                                        background: 'rgba(255,255,255,0.9)',
+                                        border: '1px solid rgba(0,0,0,0.1)'
+                                    }}
+                                    placeholder="メモを入力..."
+                                    value={sharedMemos?.[p.id] || ''}
+                                    onChange={(e) => onUpdateMemo?.(p.id, e.target.value)}
+                                    onClick={(e) => e.stopPropagation()}
+                                />
                             </div>
                         );
                     })}
@@ -288,6 +355,23 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
             <button className="btn-primary" style={{ width: '100%', background: phase === 'DISCUSSION' ? '#FF4081' : undefined }} onClick={handleSubmit}>
                 {phase === 'DISCUSSION' ? '決定して結果を見る（修正不可）' : '投票する'}
+            </button>
+
+            <button
+                onClick={onLeave}
+                style={{
+                    width: '100%',
+                    marginTop: '1rem',
+                    padding: '0.5rem',
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#888',
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem'
+                }}
+            >
+                🚪 退出する（入室画面に戻る）
             </button>
         </div>
     );

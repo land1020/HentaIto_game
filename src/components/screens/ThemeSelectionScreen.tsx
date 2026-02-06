@@ -7,7 +7,7 @@ interface ThemeSelectionScreenProps {
     gameMode: 'AUTO' | 'ORIGINAL';
     candidates: Theme[];
     onSelect: (theme: Theme) => void;
-
+    onLeave: () => void;
 }
 
 export const ThemeSelectionScreen: React.FC<ThemeSelectionScreenProps> = ({
@@ -15,7 +15,8 @@ export const ThemeSelectionScreen: React.FC<ThemeSelectionScreenProps> = ({
     isHost,
     gameMode,
     candidates,
-    onSelect
+    onSelect,
+    onLeave
 }) => {
     const [customTheme, setCustomTheme] = useState<Theme>({ text: '', min: '弱い', max: '強い', genre: 'NORMAL' });
 
@@ -29,6 +30,21 @@ export const ThemeSelectionScreen: React.FC<ThemeSelectionScreenProps> = ({
                 <div className="animate-bounce" style={{ marginTop: '2rem', fontSize: '2rem' }}>
                     🤔
                 </div>
+                <button
+                    onClick={onLeave}
+                    style={{
+                        marginTop: '2rem',
+                        padding: '0.5rem 1rem',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#888',
+                        textDecoration: 'underline',
+                        cursor: 'pointer',
+                        fontSize: '0.85rem'
+                    }}
+                >
+                    🚪 退出する
+                </button>
             </div>
         );
     }
@@ -84,6 +100,22 @@ export const ThemeSelectionScreen: React.FC<ThemeSelectionScreenProps> = ({
                     >
                         このお題で決定
                     </button>
+                    <button
+                        onClick={onLeave}
+                        style={{
+                            width: '100%',
+                            marginTop: '1rem',
+                            padding: '0.5rem',
+                            background: 'transparent',
+                            border: 'none',
+                            color: '#888',
+                            textDecoration: 'underline',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem'
+                        }}
+                    >
+                        🚪 退出する
+                    </button>
                 </div>
             </div>
         );
@@ -131,7 +163,22 @@ export const ThemeSelectionScreen: React.FC<ThemeSelectionScreenProps> = ({
                 ))}
             </div>
 
-
+            <button
+                onClick={onLeave}
+                style={{
+                    width: '100%',
+                    marginTop: '2rem',
+                    padding: '0.5rem',
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#888',
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem'
+                }}
+            >
+                🚪 退出する
+            </button>
         </div>
     );
 };

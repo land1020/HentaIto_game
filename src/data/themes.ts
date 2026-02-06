@@ -88,7 +88,9 @@ export const THEMES: Theme[] = [
     { text: "アブノーマルプレイ", min: "ノーマル", max: "アブノーマル", genre: 'ABNORMAL' },
     { text: "理想のプレイ", min: "萎える", max: "憧れ", genre: 'ABNORMAL' },
     { text: "複数プレイのシチュ", min: "萎える", max: "興奮する", genre: 'ABNORMAL' },
-    { text: "", min: "萎える", max: "興奮する", genre: 'ABNORMAL' },
-    { text: "", min: "萎える", max: "興奮する", genre: 'ABNORMAL' },
+    { text: "寝取られシチュ", min: "萎える", max: "興奮する", genre: 'ABNORMAL' },
+    { text: "外国人とプレイ", min: "ないわーｗ", max: "あるあるｗ", genre: 'ABNORMAL' },
+    { text: "夫婦プレイあるある", min: "ないわーｗ", max: "あるあるｗ", genre: 'ABNORMAL' },
+    { text: "アナルプレイあるある", min: "ないわーｗ", max: "あるあるｗ", genre: 'ABNORMAL' },
 
 ];

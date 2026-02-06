@@ -7,6 +7,7 @@ interface ResultScreenProps {
     players: Player[];
     results: any[];
     onNextRound: () => void;
+    onLeave: () => void;
     isHost: boolean;
     isLastRound?: boolean;
     theme: { text: string; min: string; max: string };
@@ -14,7 +15,7 @@ interface ResultScreenProps {
     isDebug?: boolean;
 }
 
-export const ResultScreen: React.FC<ResultScreenProps> = ({ players, results, onNextRound, isHost, isLastRound = false, theme, sharedMemos = {}, isDebug = false }) => {
+export const ResultScreen: React.FC<ResultScreenProps> = ({ players, results, onNextRound, onLeave, isHost, isLastRound = false, theme, sharedMemos = {}, isDebug = false }) => {
     // Sort results by score gain (descending)
     const sortedResults = [...results].sort((a, b) => b.scoreGain - a.scoreGain);
 
@@ -172,6 +173,23 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({ players, results, on
                     {isLastRound ? "最終結果発表へ" : "次のゲームへ"}
                 </button>
             )}
+
+            <button
+                onClick={onLeave}
+                style={{
+                    width: '100%',
+                    marginTop: '1rem',
+                    padding: '0.5rem',
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#888',
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem'
+                }}
+            >
+                🚪 退出する（入室画面に戻る）
+            </button>
         </div>
     );
 };

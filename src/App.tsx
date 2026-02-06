@@ -754,6 +754,7 @@ function App() {
           gameMode={gameSettings.gameMode}
           candidates={themeCandidates}
           onSelect={handleThemeSelected}
+          onLeave={handleLeaveGame}
         />
       );
     case 'GAME':
@@ -764,6 +765,7 @@ function App() {
           myId={myPlayerId || 'p1'}
           theme={currentTheme}
           onVote={handleVote}
+          onLeave={handleLeaveGame}
           phase={currentPhase as 'GAME' | 'DISCUSSION'}
           allGuesses={allGuesses}
           sharedMemos={sharedMemos}
@@ -776,6 +778,7 @@ function App() {
           players={players}
           results={roundResults}
           onNextRound={handleNextRound}
+          onLeave={handleLeaveGame}
           isHost={amIHost}
           isLastRound={roundCount >= players.length - 1}
           theme={currentTheme}

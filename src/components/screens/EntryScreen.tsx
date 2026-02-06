@@ -86,7 +86,11 @@ export const EntryScreen: React.FC<EntryScreenProps> = ({ onJoin }) => {
 
     return (
         <div className="entry-screen">
-            <h1>HentaIto Online</h1>
+            <h1 className="entry-title">
+                <span className="title-henta-entry">Henta</span>
+                <span className="title-ito-entry">Ito</span>
+                <span className="title-sub-entry">(変態っと)</span>
+            </h1>
 
             <div className="entry-form">
                 <div style={{ marginBottom: '1rem' }}>
@@ -175,11 +179,37 @@ export const EntryScreen: React.FC<EntryScreenProps> = ({ onJoin }) => {
           align-items: center;
           justify-content: center;
           height: 100vh;
-          background: #2c3e50;
+          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
           color: white;
-          font-family: 'Inter', sans-serif;
+          font-family: 'Mochiy Pop One', 'Inter', sans-serif;
         }
-        h1 { font-size: 3rem; margin-bottom: 2rem; font-weight: 800; }
+        .entry-title {
+          font-size: 3.5rem;
+          margin-bottom: 0.5rem;
+          font-weight: 800;
+          text-align: center;
+          filter: drop-shadow(3px 3px 0px rgba(0,0,0,0.5));
+        }
+        .title-henta-entry {
+          background: linear-gradient(180deg, #FF9A8B 0%, #FF6B95 50%, #FF6B6B 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+        .title-ito-entry {
+          background: linear-gradient(180deg, #B8F5B8 0%, #4ECDC4 50%, #2A9D8F 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          font-size: 4rem;
+        }
+        .title-sub-entry {
+          display: block;
+          font-size: 1.2rem;
+          color: #FFE66D;
+          margin-top: 0.5rem;
+          -webkit-text-fill-color: #FFE66D;
+        }
         .entry-form {
           background: rgba(30, 41, 59, 0.9);
           padding: 2rem;
