@@ -611,15 +611,19 @@ function App() {
         await submitMyGuess(targetId, val);
       }
 
-      // Host checks if everyone done?
-      // For simple flow, Host also just enters "DISCUSSION" manually or via voting logic?
-      // Let's allow Discussion Phase transition if Discussion is Enabled
-
-      if (gameSettings.isDiscussionEnabled) {
-        // Wait for all votes (handled by useEffect)
-      } else {
-        // Wait for all votes (handled by useEffect)
+      // Handle phase transitions
+      if (currentPhase === 'DISCUSSION') {
+        // In DISCUSSION phase, after submitting final votes, host calculates results
+        if (isHost) {
+          // Wait a moment for votes to sync, then calculate
+          setTimeout(() => {
+            // Use current allGuesses merged with my latest placements
+            const finalGuesses = { ...allGuesses, [myPlayerId]: myPlacements };
+            calculateAndShowResults(finalGuesses);
+          }, 500);
+        }
       }
+      // For GAME phase, the useEffect handles the transition
     } else {
       // Local Mode
       setSharedMemos(prev => ({ ...prev, p1: myWord }));
