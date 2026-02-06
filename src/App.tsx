@@ -409,15 +409,16 @@ function App() {
     // 1. Calculate Base Scores & Initialize Awards
     // Also update cumulativeScore (previous cumulative + this round's raw score)
     let tempPlayers = currentPlayers.map(p => {
-      // Base score is sum of history (raw game scores)
-      const baseScore = p.scoreHistory.reduce((a, b) => a + b, 0);
+      // Base score is sum of history (raw game scores) - ensure scoreHistory is an array
+      const scoreHistoryArr = Array.isArray(p.scoreHistory) ? p.scoreHistory : [];
+      const baseScore = scoreHistoryArr.reduce((a, b) => a + b, 0);
       // Get the latest round's score (last item in history for this player)
       const latestRound = history.length > 0 ? history[history.length - 1] : [];
       const latestResult = latestRound.find((r: RoundResult) => r.playerId === p.id);
       const latestRoundScore = latestResult ? latestResult.scoreGain : 0;
       // Update cumulative score: previous cumulative + this round's score
-      const newCumulativeScore = p.cumulativeScore + latestRoundScore;
-      return { ...p, score: baseScore, cumulativeScore: newCumulativeScore, awards: [] as SpecialAward[] };
+      const newCumulativeScore = (p.cumulativeScore || 0) + latestRoundScore;
+      return { ...p, score: baseScore, cumulativeScore: newCumulativeScore, awards: [] as SpecialAward[], scoreHistory: scoreHistoryArr };
     });
 
     const awardUpdates: Record<string, SpecialAward[]> = {};
@@ -574,10 +575,11 @@ function App() {
     let tempPlayers = players.map(p => {
       const res = currentResults.find((r: any) => r.playerId === p.id);
       const gain = res ? res.scoreGain : 0;
+      const currentHistory = Array.isArray(p.scoreHistory) ? p.scoreHistory : [];
       // We push to history, but we don't update 'score' yet because calculateTotalScore will do it from history
       return {
         ...p,
-        scoreHistory: [...p.scoreHistory, gain]
+        scoreHistory: [...currentHistory, gain]
       };
     });
 
@@ -694,12 +696,14 @@ function App() {
     // End of game check
     if (nextRound >= players.length) {
       const finalPlayers = players.map(p => {
-        const baseScore = p.scoreHistory.reduce((a, b) => a + b, 0);
+        const scoreHistoryArr = Array.isArray(p.scoreHistory) ? p.scoreHistory : [];
+        const baseScore = scoreHistoryArr.reduce((a, b) => a + b, 0);
         return {
           ...p,
           score: baseScore,
+          scoreHistory: scoreHistoryArr,
           awards: [],
-          title: calculateTitle(p.cumulativeScore)
+          title: calculateTitle(p.cumulativeScore || 0)
         };
       });
 
