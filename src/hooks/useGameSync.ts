@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { subscribeToRoom, updateGameState, updatePlayer, type GameState, submitGuess, submitMemo, submitDiscussionCompletion } from '../services/gameService';
+import { subscribeToRoom, updateGameState, updatePlayer, type GameState, submitGuess, submitMemo, submitDiscussionCompletion, submitThemeSelection } from '../services/gameService';
 import type { Player } from '../types/game';
+import type { Theme } from '../data/themes';
 
 interface UseGameSyncProps {
     roomId: string | null;
@@ -63,12 +64,18 @@ export const useGameSync = ({ roomId, myPlayerId, onStateChange }: UseGameSyncPr
         await submitDiscussionCompletion(roomId, myPlayerId);
     };
 
+    const submitThemeSelect = async (theme: Theme, usedThemes: string[]) => {
+        if (!roomId) return;
+        await submitThemeSelection(roomId, theme, usedThemes);
+    };
+
     return {
         isHost,
         syncState,
         syncMyPlayer,
         submitMyGuess,
         submitSharedMemo,
-        submitDiscussionDone
+        submitDiscussionDone,
+        submitThemeSelect
     };
 };

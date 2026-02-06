@@ -92,7 +92,7 @@ function App() {
     setCurrentTurnPlayerId(newState.currentTurnPlayerId || null);
   };
 
-  const { isHost, syncState, syncMyPlayer, submitMyGuess, submitSharedMemo, submitDiscussionDone } = useGameSync({
+  const { isHost, syncState, syncMyPlayer, submitMyGuess, submitSharedMemo, submitDiscussionDone, submitThemeSelect } = useGameSync({
     roomId: roomId || null,
     myPlayerId: myPlayerId || null,
     onStateChange: handleOnlineStateChange
@@ -362,16 +362,13 @@ function App() {
     }
   };
 
-  const handleThemeSelected = (theme: Theme) => {
+  const handleThemeSelected = async (theme: Theme) => {
     const nextUsed = new Set(usedThemeTexts);
     nextUsed.add(theme.text);
 
-    if (roomId && isHost) {
-      updateGameFn({
-        currentTheme: theme,
-        phase: 'GAME',
-        usedThemeTexts: Array.from(nextUsed)
-      });
+    if (roomId) {
+      // Anyone (Host or TurnPlayer) can trigger this via the dedicated API
+      await submitThemeSelect(theme, Array.from(nextUsed));
     } else {
       setUsedThemeTexts(nextUsed);
       setCurrentTheme(theme);

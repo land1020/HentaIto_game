@@ -152,3 +152,11 @@ export const submitDiscussionCompletion = async (roomId: string, playerId: strin
     const path = `rooms/${roomId}/discussionVoted`;
     await update(ref(database, path), { [playerId]: true });
 };
+
+export const submitThemeSelection = async (roomId: string, theme: Theme, nextUsedThemes: string[]) => {
+    await update(ref(database, `rooms/${roomId}`), {
+        currentTheme: theme,
+        phase: 'GAME',
+        usedThemeTexts: nextUsedThemes
+    });
+};
