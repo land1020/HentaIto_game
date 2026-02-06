@@ -390,13 +390,44 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                 borderRadius: '8px',
                 fontSize: '0.9rem'
             }}>
-                <span style={{ fontWeight: 'bold' }}>投票状況: </span>
-                <span style={{
-                    color: votedCount === totalPlayers ? '#4CAF50' : '#FF9800',
-                    fontWeight: 'bold'
-                }}>
-                    {votedCount} / {totalPlayers} 人完了
-                </span>
+                <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                    投票状況: <span style={{ color: votedCount === totalPlayers ? '#4CAF50' : '#FF9800' }}>{votedCount} / {totalPlayers}</span>
+                </div>
+                {/* Visual Indicator for each player */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '4px' }}>
+                    {players.map(p => {
+                        const isVoted = allGuesses[p.id] !== undefined || (p.id === myId && hasVoted);
+                        return (
+                            <div key={p.id} style={{
+                                position: 'relative',
+                                width: '24px',
+                                height: '24px',
+                                borderRadius: '50%',
+                                background: p.color,
+                                border: '2px solid white',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                opacity: isVoted ? 1 : 0.4
+                            }} title={p.name}>
+                                {isVoted && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '-4px',
+                                        right: '-4px',
+                                        background: '#4CAF50',
+                                        color: 'white',
+                                        borderRadius: '50%',
+                                        width: '12px',
+                                        height: '12px',
+                                        fontSize: '8px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>✓</div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
 
             {/* Vote Button or Voted Indicator */}

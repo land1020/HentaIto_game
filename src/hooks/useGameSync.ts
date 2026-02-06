@@ -53,9 +53,9 @@ export const useGameSync = ({ roomId, myPlayerId, onStateChange }: UseGameSyncPr
         await submitGuess(roomId, myPlayerId, targetId, value);
     };
 
-    const submitMyMemo = async (memo: string) => {
+    const submitSharedMemo = async (targetId: string, memo: string) => {
         if (!roomId || !myPlayerId) return;
-        await submitMemo(roomId, myPlayerId, memo);
+        await submitMemo(roomId, targetId, memo);
     };
 
     return {
@@ -63,6 +63,6 @@ export const useGameSync = ({ roomId, myPlayerId, onStateChange }: UseGameSyncPr
         syncState,
         syncMyPlayer,
         submitMyGuess,
-        submitMyMemo
+        submitSharedMemo
     };
 };

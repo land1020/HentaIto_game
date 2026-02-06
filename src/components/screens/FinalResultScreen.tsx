@@ -4,14 +4,15 @@ import type { Player } from '../../types/game';
 interface FinalResultScreenProps {
     players: Player[];
     onBackToLobby: () => void;
+    isDebug?: boolean;
 }
 
-export const FinalResultScreen: React.FC<FinalResultScreenProps> = ({ players, onBackToLobby }) => {
+export const FinalResultScreen: React.FC<FinalResultScreenProps> = ({ players, onBackToLobby, isDebug = false }) => {
     return (
         <div className="container" style={{ textAlign: 'center' }}>
             {/* Title handled inside RankingList or header */}
 
-            <RankingList players={players} showTitle={true} isDebug={true} />
+            <RankingList players={players} showTitle={true} isDebug={isDebug} />
 
             <button
                 className="btn-primary"

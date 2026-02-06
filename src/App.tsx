@@ -88,7 +88,7 @@ function App() {
     setGameHistory(newState.gameHistory || []);
   };
 
-  const { isHost, syncState, syncMyPlayer, submitMyGuess, submitMyMemo } = useGameSync({
+  const { isHost, syncState, syncMyPlayer, submitMyGuess, submitSharedMemo } = useGameSync({
     roomId: roomId || null,
     myPlayerId: myPlayerId || null,
     onStateChange: handleOnlineStateChange
@@ -508,18 +508,23 @@ function App() {
     const rankBonuses = [100, 50, 30];
     tempPlayers = tempPlayers.map((p, idx) => {
       const bonus = rankBonuses[idx] || 0;
+      const finalScore = p.score + bonus;
+      const newCumulativeScore = (p.cumulativeScore || 0) + bonus;
       if (bonus > 0) {
         const newAwards = [...(p as any).awards, { name: `${idx + 1}位`, description: '順位ボーナス', bonus }];
         return {
           ...p,
-          score: p.score + bonus,
+          score: finalScore,
+          cumulativeScore: newCumulativeScore,
           awards: newAwards,
-          title: calculateTitle(p.cumulativeScore) // Update title based on cumulative score
+          title: calculateTitle(finalScore) // Update title based on FINAL score (with all bonuses)
         };
       }
       return {
         ...p,
-        title: calculateTitle(p.cumulativeScore) // Use cumulative score for title
+        score: finalScore,
+        cumulativeScore: newCumulativeScore,
+        title: calculateTitle(finalScore) // Use final score for title
       };
     });
 
@@ -609,7 +614,7 @@ function App() {
   const handleVote = async (myPlacements: Record<string, number>, myWord: string) => {
     if (roomId) {
       // Online Mode
-      await submitMyMemo(myWord);
+      await submitSharedMemo(myPlayerId!, myWord);
       for (const [targetId, val] of Object.entries(myPlacements)) {
         await submitMyGuess(targetId, val);
       }
@@ -734,25 +739,48 @@ function App() {
 
   const handleBackToLobby = () => {
     if (roomId && isHost) {
+      // Reset players: Only restore MY host status (as owner), reset others
+      const resetPlayers: Record<string, Player> = {};
+      players.forEach(p => {
+        resetPlayers[p.id] = {
+          ...p,
+          isHost: p.id === myPlayerId, // Restore Owner Host authority
+          isReady: false,
+          score: 0,
+          scoreHistory: [],
+          cumulativeScore: 0,
+          awards: [],
+          title: '新人',
+          targetNumber: 0,
+          handPosition: null
+        };
+      });
+
       updateGameFn({
         phase: 'LOBBY',
         roundCount: 0,
-        roundResults: [], // Clear on server? structure of partial update might need fix
-        // Simplified: Just phase change creates visual reset
+        roundResults: [],
+        players: resetPlayers,
+        gameHistory: [],
+        allGuesses: {},
+        sharedMemos: {},
+        currentTheme: null,
+        usedThemeTexts: [] // Reset used themes
       });
     } else {
       setRoundCount(0);
       setPlayers([]);
       setRoundResults([]);
       setCurrentPhase('LOBBY');
+      // Local mode usually redirects to Entry if players are cleared?
+      // Check useEffect for PHASE LOBBY
     }
   };
 
   const handleUpdateMemo = (pid: string, text: string) => {
     if (roomId) {
-      if (pid === myPlayerId) {
-        submitMyMemo(text);
-      }
+      // Allow editing ANY player's memo (Shared whiteboard style)
+      submitSharedMemo(pid, text);
     } else {
       setSharedMemos(prev => ({ ...prev, [pid]: text }));
     }
@@ -886,6 +914,7 @@ function App() {
         <FinalResultScreen
           players={players}
           onBackToLobby={handleBackToLobby}
+          isDebug={isDebug}
         />
       );
     default:
