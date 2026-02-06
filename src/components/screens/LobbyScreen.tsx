@@ -17,9 +17,11 @@ const COLORS = [
 
 interface LobbyScreenProps {
     roomId: string;
-    playerName: string;
-    isDebug: boolean;
+    players: Player[];
+    myPlayerId: string;
     onStartGame: (settings: GameSettings, myColor: string) => void;
+    onUpdateColor: (color: string) => void;
+    onLeave: () => void;
 }
 
 export interface GameSettings {
@@ -30,59 +32,14 @@ export interface GameSettings {
     includeAbnormalThemes: boolean;
 }
 
-export const LobbyScreen: React.FC<LobbyScreenProps> = ({ roomId, playerName, isDebug, onStartGame }) => {
-    const [myColor, setMyColor] = useState(COLORS[0].code);
+export const LobbyScreen: React.FC<LobbyScreenProps> = ({ roomId, players, myPlayerId, onStartGame, onUpdateColor, onLeave }) => {
+    // Find my current player data
+    const myPlayer = players.find(p => p.id === myPlayerId);
+    const myColor = myPlayer?.color || COLORS[0].code;
+    const isMeHost = myPlayer?.isHost || false;
 
-    // Mock participants state
-    // In a real app, this would be updated via websocket or polling
-    // For local UI feedback, update "p1" color when myColor changes
-    const participants: Player[] = [
-        {
-            id: 'p1',
-            name: playerName,
-            color: myColor,
-            score: 0,
-            scoreHistory: [],
-            title: '新人',
-            targetNumber: 0,
-            handPosition: null,
-            isReady: true,
-            isHost: true,
-            isNpc: false,
-            cumulativeScore: 0
-        },
-        // Add NPCs if debug mode
-        ...(isDebug ? [
-            {
-                id: 'npc1',
-                name: 'NPCタロウ',
-                color: '#4ECDC4',
-                score: 0,
-                scoreHistory: [],
-                title: 'ロボ',
-                targetNumber: 0,
-                handPosition: null,
-                isReady: true,
-                isHost: false,
-                isNpc: true,
-                cumulativeScore: 0
-            },
-            {
-                id: 'npc2',
-                name: 'NPCハナコ',
-                color: '#FFE66D',
-                score: 0,
-                scoreHistory: [],
-                title: 'メカ',
-                targetNumber: 0,
-                handPosition: null,
-                isReady: true,
-                isHost: false,
-                isNpc: true,
-                cumulativeScore: 0
-            }
-        ] : [])
-    ];
+    // Use players from props instead of mock participants
+    const participants = players;
 
     const [settings, setSettings] = useState<GameSettings>({
         gameMode: 'AUTO',
@@ -111,7 +68,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ roomId, playerName, is
                     {COLORS.map((c) => (
                         <button
                             key={c.code}
-                            onClick={() => setMyColor(c.code)}
+                            onClick={() => onUpdateColor(c.code)}
                             style={{
                                 width: '40px',
                                 height: '40px',
@@ -145,7 +102,10 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ roomId, playerName, is
                         }}>
                             <div>
                                 <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '2px' }}>{p.title}</div>
-                                <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>{p.name}</div>
+                                <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
+                                    {p.name}
+                                    {p.id === myPlayerId && <span style={{ fontSize: '0.8rem', color: '#888', marginLeft: '4px' }}>(あなた)</span>}
+                                </div>
                             </div>
                             <div style={{ display: 'flex', gap: '4px' }}>
                                 {p.isHost && <span style={{ fontSize: '0.7rem', background: 'var(--color-accent)', color: 'var(--color-text)', padding: '2px 8px', borderRadius: '12px', fontWeight: 'bold' }}>HOST</span>}
@@ -157,9 +117,9 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ roomId, playerName, is
             </div>
 
             <div style={{ background: 'white', padding: '1.5rem', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-md)', marginBottom: '2rem' }}>
-                <h3>ゲーム設定</h3>
+                <h3>ゲーム設定 {isMeHost ? '' : '(ホストのみ変更可能)'}</h3>
 
-                <div style={{ marginBottom: '1rem' }}>
+                <div style={{ marginBottom: '1rem', opacity: isMeHost ? 1 : 0.6, pointerEvents: isMeHost ? 'auto' : 'none' }}>
                     <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>お題モード</label>
                     <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.8rem' }}>
                         <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
@@ -213,7 +173,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ roomId, playerName, is
                     </div>
                 </div>
 
-                <div style={{ marginBottom: '1rem' }}>
+                <div style={{ marginBottom: '1rem', opacity: isMeHost ? 1 : 0.6, pointerEvents: isMeHost ? 'auto' : 'none' }}>
                     <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                         <input
                             type="checkbox"
@@ -226,7 +186,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ roomId, playerName, is
                     <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '4px' }}>ONにすると、結果発表前にアイコン再調整タイムがあります。</p>
                 </div>
 
-                <div>
+                <div style={{ opacity: isMeHost ? 1 : 0.6, pointerEvents: isMeHost ? 'auto' : 'none' }}>
                     <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>制限時間 (秒)</label>
                     <input
                         type="number"
@@ -240,8 +200,30 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ roomId, playerName, is
                 </div>
             </div >
 
-            <button className="btn-primary" style={{ width: '100%' }} onClick={() => onStartGame(settings, myColor)}>
-                ゲーム開始
+            {isMeHost ? (
+                <button className="btn-primary" style={{ width: '100%' }} onClick={() => onStartGame(settings, myColor)}>
+                    ゲーム開始
+                </button>
+            ) : (
+                <div style={{ textAlign: 'center', padding: '1rem', background: '#f5f5f5', borderRadius: '8px', color: '#666' }}>
+                    ホストが設定中... 開始までお待ちください
+                </div>
+            )}
+
+            <button
+                onClick={onLeave}
+                style={{
+                    width: '100%',
+                    marginTop: '1rem',
+                    padding: '0.5rem',
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#666',
+                    textDecoration: 'underline',
+                    cursor: 'pointer'
+                }}
+            >
+                部屋から退出 / タイトルへ
             </button>
         </div >
     );

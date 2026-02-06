@@ -11,7 +11,7 @@ import { NormalWords, WinnerWords, AbnormalWords, DangerWords, DecoratorWords } 
 import { THEMES, type Theme } from './data/themes';
 import { useGameSync } from './hooks/useGameSync';
 import type { GameState } from './services/gameService';
-
+import { saveSession, getSession, clearSession } from './services/sessionManager';
 
 function App() {
   // --- Game State ---
@@ -50,40 +50,78 @@ function App() {
   // Navigation Logic
   // Initial Entry -> Lobby
   const [entryDone, setEntryDone] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(true);
+
+  // --- Effects ---
+
+  // Restore Session
+  useEffect(() => {
+    const session = getSession();
+    if (session) {
+      setMyPlayerName(session.playerName);
+      setRoomId(session.roomId);
+      setIsDebug(session.isDebug);
+      setMyPlayerId(session.playerId);
+      setEntryDone(true);
+      setCurrentPhase('LOBBY');
+    }
+    setIsRestoring(false);
+  }, []);
 
   // --- Online Sync Hook ---
   const handleOnlineStateChange = (newState: GameState) => {
     // Sync local state from remote
-    setPlayers(Object.values(newState.players));
+    // Safely handle players - convert from object to array, or use empty array
+    const playersArray = newState.players ? Object.values(newState.players) : [];
+    setPlayers(playersArray);
     setCurrentPhase(newState.phase);
-    setGameSettings(newState.settings);
-    setRoundCount(newState.roundCount);
+    if (newState.settings) setGameSettings(newState.settings);
+    setRoundCount(newState.roundCount || 0);
     if (newState.currentTheme) setCurrentTheme(newState.currentTheme);
     setThemeCandidates(newState.themeCandidates || []);
     setSharedMemos(newState.sharedMemos || {});
     // Reconstruct Set from array
     setUsedThemeTexts(new Set(newState.usedThemeTexts || []));
     setAllGuesses(newState.allGuesses || {});
-    // setRoundResults(newState.roundResults || []); // Need to check structure
-    // setGameHistory(newState.gameHistory || []);
+    setRoundResults(newState.roundResults || []);
+    setGameHistory(newState.gameHistory || []);
   };
 
-  const { isHost, syncState, submitMyGuess, submitMyMemo } = useGameSync({
+  const { isHost, syncState, syncMyPlayer, submitMyGuess, submitMyMemo } = useGameSync({
     roomId: roomId || null,
     myPlayerId: myPlayerId || null,
     onStateChange: handleOnlineStateChange
   });
 
   // --- Effects ---
+
   useEffect(() => {
     // Host Logic: Check if we should advance from GAME to DISCUSSION or RESULT
-    if (roomId && isHost && currentPhase === 'GAME') {
-      // Check if everyone has guessed everyone else?
-      // Or just check if everyone has 'isReady' (we can use isReady to mean "Voted")
-      // Implementing strict check might be hard without extra state.
-      // For now, let's rely on manual progression or Host's local state acting as trigger.
+    if (roomId && isHost) {
+      const allVoted = players.length > 0 && Object.keys(allGuesses).length === players.length;
+
+      if (allVoted) {
+        if (currentPhase === 'GAME') {
+          if (gameSettings.isDiscussionEnabled) {
+            // If not already moving, move to DISCUSSION
+            // Add a small delay for UX? Or just go.
+            updateGameFn({ phase: 'DISCUSSION' });
+          } else {
+            // Go to RESULT immediately
+            // We need to calculate results on Host and sync them
+            // But calculateAndShowResults uses local state setter. 
+            // We should adapt it or call it, then it calls updateGameFn inside?
+            // Wait... calculateAndShowResults calls setRoundResults, setGameHistory, setPlayers locally.
+            // We need an online version of calculateAndShowResults.
+
+            // Let's refactor calculateAndShowResults to RETURN data, then we use updateGameFn.
+            // Or just modify 'calculateAndShowResults' to handle online check inside.
+            calculateAndShowResults(allGuesses);
+          }
+        }
+      }
     }
-  }, [roomId, isHost, currentPhase, allGuesses]);
+  }, [roomId, isHost, currentPhase, allGuesses, players.length, gameSettings.isDiscussionEnabled]);
 
 
   // --- Handlers ---
@@ -92,8 +130,14 @@ function App() {
     setMyPlayerName(name);
     setRoomId(room);
     setIsDebug(debug);
-    // setMyPlayerColor(color); // Removed
-    if (myPid) setMyPlayerId(myPid);
+
+    if (myPid) {
+      setMyPlayerId(myPid);
+      // Save session if online
+      if (room) {
+        saveSession(room, myPid, name, color, debug);
+      }
+    }
 
     setEntryDone(true);
     setCurrentPhase('LOBBY');
@@ -105,9 +149,18 @@ function App() {
         targetNumber: 0, handPosition: null, isReady: true, isHost: true, isNpc: false, awards: []
       };
       setPlayers([me]);
-    } else {
-      // Online Mode: Join already handled by EntryScreen calling API
-      // We just wait for sync to populate players.
+    }
+  };
+
+  const handleLeaveGame = () => {
+    if (confirm('ゲームを終了して部屋から退出しますか？')) {
+      clearSession();
+      setEntryDone(false);
+      setRoomId('');
+      setMyPlayerId('');
+      setPlayers([]);
+      setCurrentPhase('LOBBY');
+      window.location.reload();
     }
   };
 
@@ -529,13 +582,25 @@ function App() {
 
     // Temp history including this round
     const newHistory = [...gameHistory, currentResults];
-    setGameHistory(newHistory); // Commit history state
-
     // Recalculate everything (Awards, Ranks)
     const finalPlayers = calculateTotalScore(tempPlayers, newHistory);
 
-    setPlayers(finalPlayers);
-    setCurrentPhase('RESULT');
+    if (roomId && isHost) {
+      const playersObj: Record<string, Player> = {};
+      finalPlayers.forEach(p => playersObj[p.id] = p);
+
+      updateGameFn({
+        roundResults: currentResults,
+        gameHistory: newHistory,
+        players: playersObj,
+        phase: 'RESULT'
+      });
+    } else {
+      setRoundResults(currentResults);
+      setGameHistory(newHistory); // Commit history state
+      setPlayers(finalPlayers);
+      setCurrentPhase('RESULT');
+    }
   };
 
   const handleVote = async (myPlacements: Record<string, number>, myWord: string) => {
@@ -551,32 +616,9 @@ function App() {
       // Let's allow Discussion Phase transition if Discussion is Enabled
 
       if (gameSettings.isDiscussionEnabled) {
-        // If I am Host, I can decide to move to Discussion
-        if (isHost) {
-          // Maybe wait a bit or just go?
-          // Ideally we wait for all players.
-          // For now, let's just push phase change after a short delay or immediately?
-          // Updating Phase to DISCUSSION requires Host action.
-          // Let's assume Host clicks "Finish Voting" button?
-          // But UI doesn't have that button, it's automatic.
-
-          // WORKAROUND: Update phase to DISCUSSION immediately if I am host.
-          // This is not perfect (doesn't wait for others), but fits existing flow.
-          updateGameFn({ phase: 'DISCUSSION' });
-        }
+        // Wait for all votes (handled by useEffect)
       } else {
-        // Go to Result
-        // This is tricky because we need everyone's votes for result.
-        // If we calculate result now, we might miss votes.
-        // Online game usually needs a "Wait for others" screen.
-
-        // For now, let's just stay in GAME/DISCUSSION until Host manually proceeds?
-        // But 'GameScreen' calls onVote then expects result.
-
-        // Let's do this:
-        // If Online, we DON'T calculate results locally here.
-        // We just submit votes.
-        // The Host needs to monitor votes and trigger result calculation.
+        // Wait for all votes (handled by useEffect)
       }
     } else {
       // Local Mode
@@ -665,7 +707,20 @@ function App() {
     }
   };
 
+  const handleUpdateColor = async (color: string) => {
+    if (roomId && myPlayerId) {
+      await syncMyPlayer({ color });
+    } else {
+      // Local: update my player in list
+      setPlayers(prev => prev.map(p => p.id === 'p1' ? { ...p, color } : p));
+    }
+  };
+
   // --- Render ---
+
+  if (isRestoring) {
+    return <div className="loading-screen">Session Restoring...</div>;
+  }
 
   if (!entryDone) {
     return <EntryScreen onJoin={handleJoin} />;
@@ -680,9 +735,11 @@ function App() {
       return (
         <LobbyScreen
           roomId={roomId}
-          playerName={myPlayerName}
-          isDebug={isDebug}
+          players={players}
+          myPlayerId={myPlayerId || 'p1'}
           onStartGame={handleStartGame}
+          onUpdateColor={handleUpdateColor}
+          onLeave={handleLeaveGame}
         />
       );
     case 'SETTING':
