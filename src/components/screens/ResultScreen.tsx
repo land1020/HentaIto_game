@@ -93,12 +93,12 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({ players, results, on
 
                     return (
                         <div key={res.playerId} style={{
-                            background: 'white',
+                            background: `linear-gradient(135deg, ${player.color}11 0%, ${player.color}22 100%)`,
                             padding: '1rem',
                             borderRadius: 'var(--radius-md)',
                             marginBottom: '0.8rem',
                             boxShadow: 'var(--shadow-sm)',
-                            border: index === 0 ? '2px solid var(--color-accent)' : '1px solid #eee',
+                            border: `2px solid ${player.color}`,
                             overflow: 'hidden'
                         }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>

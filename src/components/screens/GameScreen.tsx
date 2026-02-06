@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Player } from '../../types/game';
 import { ValueSlider } from '../ui/ValueSlider';
 import type { Theme } from '../../data/themes';
@@ -91,6 +91,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         onUpdateMemo?.(myId, val); // Update shared state immediately
     };
 
+    // Sync myWord with sharedMemos when it changes externally (e.g. edited by another player)
+    useEffect(() => {
+        const sharedVal = sharedMemos?.[myId];
+        if (sharedVal !== undefined && sharedVal !== myWord) {
+            setMyWord(sharedVal);
+        }
+    }, [sharedMemos, myId]);
+
     // State for local voted indicator
     const [hasVoted, setHasVoted] = useState(false);
 
@@ -179,8 +187,30 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     padding: '8px 16px',
                     borderRadius: '8px'
                 }}>
-                    <span>1️⃣ {themeMin}</span>
-                    <span>💯 {themeMax}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{
+                            background: '#3182CE', // Blue
+                            color: 'white',
+                            borderRadius: '6px',
+                            padding: '4px 8px',
+                            fontWeight: 'bold',
+                            fontSize: '0.9rem',
+                            boxShadow: '0 2px 4px rgba(49, 130, 206, 0.3)'
+                        }}>1</span>
+                        <span style={{ fontWeight: 'bold' }}>{themeMin}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{
+                            background: '#E53E3E', // Red
+                            color: 'white',
+                            borderRadius: '6px',
+                            padding: '4px 6px', // Slightly less padding for 3 digits? or same?
+                            fontWeight: 'bold',
+                            fontSize: '0.9rem',
+                            boxShadow: '0 2px 4px rgba(229, 62, 62, 0.3)'
+                        }}>100</span>
+                        <span style={{ fontWeight: 'bold' }}>{themeMax}</span>
+                    </div>
                 </div>
             </div>
 

@@ -426,52 +426,94 @@ function App() {
 
     // 2. Special Awards Calculation (Same logic as before)
     // True Understander / Zero Empathy
-    let bestGuesserId = '';
-    let worstGuesserId = '';
-    let minTotalDiff = Infinity;
-    let maxTotalDiff = -1;
 
-    tempPlayers.forEach(guesser => {
-      let myTotalDiff = 0;
-      history.forEach(round => {
-        round.forEach((res: RoundResult) => {
-          if (res.playerId === guesser.id) return;
-          const myGuess = res.guesses[guesser.id];
-          if (myGuess !== undefined) {
-            myTotalDiff += Math.abs(myGuess - res.targetNumber);
-          }
-        });
-      });
+    // --- New Special Awards Calculation ---
+    // 1. Calculate diff stats (Given vs Received)
+    const playerGivenStats: Record<string, { diffSum: number, count: number }> = {};
+    const playerReceivedStats: Record<string, { diffSum: number, count: number }> = {};
 
-      if (myTotalDiff < minTotalDiff) {
-        minTotalDiff = myTotalDiff;
-        bestGuesserId = guesser.id;
-      }
-      if (myTotalDiff > maxTotalDiff) {
-        maxTotalDiff = myTotalDiff;
-        worstGuesserId = guesser.id;
-      }
+    tempPlayers.forEach(p => {
+      playerGivenStats[p.id] = { diffSum: 0, count: 0 };
+      playerReceivedStats[p.id] = { diffSum: 0, count: 0 };
     });
 
-    if (bestGuesserId) {
-      awardUpdates[bestGuesserId].push({ name: '真の理解者', description: '他プレイヤーとのズレが最も少なかった', bonus: 50 });
-    }
-    if (worstGuesserId && worstGuesserId !== bestGuesserId) {
-      awardUpdates[worstGuesserId].push({ name: '共感性0', description: '他プレイヤーとのズレが最も大きかった', bonus: -50 });
-    }
+    history.forEach(rounds => {
+      rounds.forEach((res: RoundResult) => {
+        const targetPlayerId = res.playerId;
+        const targetNum = res.targetNumber;
+        // res.guesses: guesserId -> val
 
-    // Perfect Match
-    tempPlayers.forEach(guesser => {
-      history.forEach(round => {
-        round.forEach((res: RoundResult) => {
-          if (res.playerId === guesser.id) return;
-          const myGuess = res.guesses[guesser.id];
-          if (myGuess === res.targetNumber) {
-            awardUpdates[guesser.id].push({ name: 'ピッタリ賞', description: 'ズレ0で正解した', bonus: 20 });
+        Object.entries(res.guesses).forEach(([guesserId, val]) => {
+          const diff = Math.abs(val - targetNum);
+
+          // Update Given (Guesser stats)
+          if (playerGivenStats[guesserId]) {
+            playerGivenStats[guesserId].diffSum += diff;
+            playerGivenStats[guesserId].count += 1;
+          }
+
+          // Update Received (Target stats)
+          if (playerReceivedStats[targetPlayerId]) {
+            playerReceivedStats[targetPlayerId].diffSum += diff;
+            playerReceivedStats[targetPlayerId].count += 1;
+          }
+
+          // Perfect Match Check (retain existing logic)
+          if (diff === 0 && tempPlayers.find(p => p.id === guesserId)) {
+            awardUpdates[guesserId].push({ name: 'ピッタリ賞', description: 'ズレ0で正解した', bonus: 20 });
           }
         });
       });
     });
+
+    // 2. Find winners/losers based on Average Diff
+    let minGivenAvg = Infinity; let bestUnderstanderId = '';
+    let maxGivenAvg = -1; let worstGuesserId = '';
+
+    let minReceivedAvg = Infinity; let bestResonatorId = '';
+    let maxReceivedAvg = -1; let worstResonatorId = '';
+
+    tempPlayers.forEach(p => {
+      const given = playerGivenStats[p.id];
+      const received = playerReceivedStats[p.id];
+
+      // Given (自分の予想)
+      if (given.count > 0) {
+        const avg = given.diffSum / given.count;
+        // Strict inequality to take first found or update if better? 
+        // Using < or > updates each time better is found.
+        if (avg < minGivenAvg) { minGivenAvg = avg; bestUnderstanderId = p.id; }
+        if (avg > maxGivenAvg) { maxGivenAvg = avg; worstGuesserId = p.id; }
+      }
+
+      // Received (他からの予想)
+      if (received.count > 0) {
+        const avg = received.diffSum / received.count;
+        if (avg < minReceivedAvg) { minReceivedAvg = avg; bestResonatorId = p.id; }
+        if (avg > maxReceivedAvg) { maxReceivedAvg = avg; worstResonatorId = p.id; }
+      }
+    });
+
+    // 3. Apply Awards (Avoid duplicating same person for opposite awards if logic allows, 
+    // but here criteria are distinct enough. Conflict resolution: unique awards per category?)
+
+    // 真の理解者: Given Diff Min (+20)
+    if (bestUnderstanderId) {
+      awardUpdates[bestUnderstanderId].push({ name: '真の理解者', description: '自分の予想が最も正確', bonus: 20 });
+    }
+    // ファーｗｗｗ: Given Diff Max (-20)
+    if (worstGuesserId && worstGuesserId !== bestUnderstanderId) {
+      awardUpdates[worstGuesserId].push({ name: 'ファーｗｗｗ', description: '自分の予想が最も不正確', bonus: -20 });
+    }
+
+    // 共感者: Received Diff Min (+20)
+    if (bestResonatorId) {
+      awardUpdates[bestResonatorId].push({ name: '共感者', description: '周りからの予想が最も正確', bonus: 20 });
+    }
+    // 共感性0: Received Diff Max (-20)
+    if (worstResonatorId && worstResonatorId !== bestResonatorId) {
+      awardUpdates[worstResonatorId].push({ name: '共感性0', description: '周りからの予想が最も不正確', bonus: -20 });
+    }
 
     // 3. Apply Awards & Sort for Ranking
     tempPlayers = tempPlayers.map(p => {
