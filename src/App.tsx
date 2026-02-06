@@ -11,6 +11,7 @@ import { NormalWords, WinnerWords, AbnormalWords, DangerWords, DecoratorWords } 
 import { THEMES, type Theme } from './data/themes';
 import { useGameSync } from './hooks/useGameSync';
 import type { GameState } from './services/gameService';
+import { updatePlayer } from './services/gameService';
 import { saveSession, getSession, clearSession } from './services/sessionManager';
 
 function App() {
@@ -643,6 +644,48 @@ function App() {
     }
   };
 
+  // Handle force progress by host - fill in random guesses for non-voters
+  const handleForceProgress = () => {
+    if (!isHost) return;
+
+    // Create a copy of current guesses
+    const finalGuesses = { ...allGuesses };
+
+    // For each player who hasn't voted, generate random placements
+    players.forEach(player => {
+      if (!finalGuesses[player.id]) {
+        // Generate random placements for this player
+        const randomPlacements: Record<string, number> = {};
+        players.forEach(target => {
+          if (target.id !== player.id) {
+            // Random value between 1 and 100
+            randomPlacements[target.id] = Math.floor(Math.random() * 100) + 1;
+          }
+        });
+        finalGuesses[player.id] = randomPlacements;
+      }
+    });
+
+    // Now proceed with these guesses
+    if (currentPhase === 'GAME') {
+      if (gameSettings.isDiscussionEnabled) {
+        // Go to discussion with filled guesses
+        if (roomId) {
+          updateGameFn({ phase: 'DISCUSSION', allGuesses: finalGuesses });
+        } else {
+          setAllGuesses(finalGuesses);
+          setCurrentPhase('DISCUSSION');
+        }
+      } else {
+        // Go directly to results
+        calculateAndShowResults(finalGuesses);
+      }
+    } else if (currentPhase === 'DISCUSSION') {
+      // Go to results
+      calculateAndShowResults(finalGuesses);
+    }
+  };
+
   const handleNextRound = () => {
     if (roomId && !isHost) return;
 
@@ -720,6 +763,50 @@ function App() {
     }
   };
 
+  // Handle adding NPCs for debug mode
+  const NPC_NAMES = ['NPCタロウ', 'NPCハナコ', 'NPCジロウ', 'NPCサクラ', 'NPCケン', 'NPCユキ', 'NPCリュウ', 'NPCミカ'];
+  const NPC_COLORS = ['#4ECDC4', '#FFE66D', '#FF6B6B', '#C9B1FF', '#95E1D3', '#F38181', '#AA96DA', '#FCE38A'];
+
+  const handleAddNpc = async (count: number) => {
+    if (!isDebug) return;
+
+    const currentNpcCount = players.filter(p => p.isNpc).length;
+    const newNpcs: Player[] = [];
+
+    for (let i = 0; i < count && (currentNpcCount + i) < 8; i++) {
+      const npcIndex = currentNpcCount + i;
+      const npcId = `npc_${Date.now()}_${i}`;
+      const newNpc: Player = {
+        id: npcId,
+        name: NPC_NAMES[npcIndex % NPC_NAMES.length],
+        color: NPC_COLORS[npcIndex % NPC_COLORS.length],
+        score: 0,
+        scoreHistory: [],
+        cumulativeScore: 0,
+        title: '新人',
+        targetNumber: 0,
+        handPosition: null,
+        isReady: true,
+        isHost: false,
+        isNpc: true,
+        awards: []
+      };
+      newNpcs.push(newNpc);
+    }
+
+    if (newNpcs.length === 0) return;
+
+    if (roomId && isHost) {
+      // Online: Add NPCs to Firebase
+      for (const npc of newNpcs) {
+        await updatePlayer(roomId, npc.id, npc);
+      }
+    } else {
+      // Local mode
+      setPlayers(prev => [...prev, ...newNpcs]);
+    }
+  };
+
   // --- Render ---
 
   if (isRestoring) {
@@ -744,6 +831,8 @@ function App() {
           onStartGame={handleStartGame}
           onUpdateColor={handleUpdateColor}
           onLeave={handleLeaveGame}
+          isDebug={isDebug}
+          onAddNpc={handleAddNpc}
         />
       );
     case 'SETTING':
@@ -765,11 +854,13 @@ function App() {
           myId={myPlayerId || 'p1'}
           theme={currentTheme}
           onVote={handleVote}
+          onForceProgress={handleForceProgress}
           onLeave={handleLeaveGame}
           phase={currentPhase as 'GAME' | 'DISCUSSION'}
           allGuesses={allGuesses}
           sharedMemos={sharedMemos}
           onUpdateMemo={handleUpdateMemo}
+          isHost={amIHost}
         />
       );
     case 'RESULT':

@@ -22,6 +22,8 @@ interface LobbyScreenProps {
     onStartGame: (settings: GameSettings, myColor: string) => void;
     onUpdateColor: (color: string) => void;
     onLeave: () => void;
+    isDebug?: boolean;
+    onAddNpc?: (count: number) => void;
 }
 
 export interface GameSettings {
@@ -32,7 +34,7 @@ export interface GameSettings {
     includeAbnormalThemes: boolean;
 }
 
-export const LobbyScreen: React.FC<LobbyScreenProps> = ({ roomId, players, myPlayerId, onStartGame, onUpdateColor, onLeave }) => {
+export const LobbyScreen: React.FC<LobbyScreenProps> = ({ roomId, players, myPlayerId, onStartGame, onUpdateColor, onLeave, isDebug = false, onAddNpc }) => {
     // Find my current player data
     const myPlayer = players.find(p => p.id === myPlayerId);
     const myColor = myPlayer?.color || COLORS[0].code;
@@ -114,6 +116,41 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ roomId, players, myPla
                         </div>
                     ))}
                 </div>
+
+                {/* Debug: NPC Addition */}
+                {isDebug && isMeHost && onAddNpc && (
+                    <div style={{
+                        marginTop: '1rem',
+                        padding: '1rem',
+                        background: 'linear-gradient(135deg, #FFE0B2 0%, #FFCC80 100%)',
+                        borderRadius: 'var(--radius-md)',
+                        border: '2px dashed #FF9800'
+                    }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#E65100' }}>
+                            🛠️ デバッグ: NPC追加
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                            {[1, 2, 3, 4, 5, 6, 7, 8].map(count => (
+                                <button
+                                    key={count}
+                                    onClick={() => onAddNpc(count)}
+                                    style={{
+                                        padding: '0.5rem 0.75rem',
+                                        background: 'white',
+                                        border: '2px solid #FF9800',
+                                        borderRadius: '8px',
+                                        cursor: 'pointer',
+                                        fontWeight: 'bold',
+                                        fontSize: '0.85rem',
+                                        color: '#E65100'
+                                    }}
+                                >
+                                    +{count}人
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div style={{ background: 'white', padding: '1.5rem', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-md)', marginBottom: '2rem' }}>

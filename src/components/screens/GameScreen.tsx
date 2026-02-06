@@ -8,11 +8,13 @@ interface GameScreenProps {
     myId: string;
     theme: Theme;
     onVote: (placements: Record<string, number>, myWord: string) => void;
+    onForceProgress?: () => void;
     onLeave: () => void;
     phase?: 'GAME' | 'DISCUSSION';
     allGuesses?: Record<string, Record<string, number>>;
     sharedMemos?: Record<string, string>;
     onUpdateMemo?: (id: string, text: string) => void;
+    isHost?: boolean;
 }
 
 export const GameScreen: React.FC<GameScreenProps> = ({
@@ -20,11 +22,13 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     myId,
     theme,
     onVote,
+    onForceProgress,
     onLeave,
     phase = 'GAME',
     allGuesses = {},
     sharedMemos = {},
-    onUpdateMemo
+    onUpdateMemo,
+    isHost = false
 }) => {
     const myPlayer = players.find(p => p.id === myId);
     const otherPlayers = players.filter(p => p.id !== myId);
@@ -87,6 +91,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         onUpdateMemo?.(myId, val); // Update shared state immediately
     };
 
+    // State for local voted indicator
+    const [hasVoted, setHasVoted] = useState(false);
+
+    // Calculate voting status
+    const votedCount = Object.keys(allGuesses).length;
+    const totalPlayers = players.length;
+    const hasIVoted = allGuesses[myId] !== undefined || hasVoted;
+
     const handleSubmit = () => {
         // Check if all others are placed
         const missing = otherPlayers.filter(p => placements[p.id] === undefined);
@@ -94,6 +106,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             alert(`まだ配置していないプレイヤーがいます: ${missing.map(p => p.name).join(', ')}`);
             return;
         }
+        setHasVoted(true);
         onVote(placements, myWord);
     };
 
@@ -220,7 +233,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                         : '名前をタップしてからスライダーをタップして配置予想！'}
                 </p>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
                     {otherPlayers.map(p => {
                         const isSelected = selectedPlayerId === p.id;
                         const isPlaced = placements[p.id] !== undefined;
@@ -228,10 +241,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                         return (
                             <div
                                 key={p.id}
-                                onClick={() => handleSelectPlayer(p.id)}
                                 style={{
                                     display: 'flex',
-                                    flexDirection: 'column',
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
                                     padding: '0.6rem',
                                     background: isSelected
                                         ? `linear-gradient(135deg, ${p.color}33 0%, ${p.color}55 100%)`
@@ -239,13 +252,21 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                                     border: isSelected ? `3px solid ${p.color}` : `2px solid ${p.color}66`,
                                     borderRadius: 'var(--radius-sm)',
                                     boxShadow: isSelected ? `0 4px 12px ${p.color}44` : '0 2px 4px rgba(0,0,0,0.1)',
-                                    position: 'relative',
-                                    textAlign: 'left',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease'
+                                    transition: 'all 0.2s ease',
+                                    gap: '0.5rem'
                                 }}
                             >
-                                <div style={{ display: 'flex', alignItems: 'center', width: '100%', marginBottom: '6px' }}>
+                                {/* Player selection area */}
+                                <div
+                                    onClick={() => handleSelectPlayer(p.id)}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        cursor: 'pointer',
+                                        minWidth: '100px',
+                                        flexShrink: 0
+                                    }}
+                                >
                                     <div style={{
                                         width: '16px',
                                         height: '16px',
@@ -255,37 +276,45 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                                         border: '2px solid white',
                                         boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
                                     }}></div>
-                                    <span style={{ fontWeight: 'bold', fontSize: '0.85rem', flex: 1 }}>
+                                    <span style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>
                                         {p.title && p.title !== '新人' ? `${p.title} ${p.name}` : p.name}
                                     </span>
-                                    {isPlaced && (
-                                        <span style={{
-                                            fontSize: '0.9rem',
-                                            fontWeight: 'bold',
-                                            color: 'white',
-                                            background: '#4CAF50',
-                                            padding: '2px 8px',
-                                            borderRadius: '10px'
-                                        }}>✓ {placements[p.id]}</span>
-                                    )}
                                 </div>
 
+                                {/* Memo input */}
                                 <input
+                                    type="text"
                                     className="input-field"
                                     style={{
-                                        fontSize: '0.8rem',
-                                        padding: '6px 8px',
+                                        fontSize: '0.85rem',
+                                        padding: '8px 10px',
                                         margin: 0,
-                                        width: '100%',
+                                        flex: 1,
+                                        minWidth: 0,
                                         boxSizing: 'border-box',
-                                        background: 'rgba(255,255,255,0.9)',
-                                        border: '1px solid rgba(0,0,0,0.1)'
+                                        background: 'rgba(255,255,255,0.95)',
+                                        border: '1px solid rgba(0,0,0,0.15)',
+                                        borderRadius: '8px'
                                     }}
                                     placeholder="メモを入力..."
                                     value={sharedMemos?.[p.id] || ''}
                                     onChange={(e) => onUpdateMemo?.(p.id, e.target.value)}
                                     onClick={(e) => e.stopPropagation()}
+                                    onFocus={(e) => e.stopPropagation()}
                                 />
+
+                                {/* Placement indicator */}
+                                {isPlaced && (
+                                    <span style={{
+                                        fontSize: '0.9rem',
+                                        fontWeight: 'bold',
+                                        color: 'white',
+                                        background: '#4CAF50',
+                                        padding: '4px 10px',
+                                        borderRadius: '10px',
+                                        flexShrink: 0
+                                    }}>✓ {placements[p.id]}</span>
+                                )}
                             </div>
                         );
                     })}
@@ -352,10 +381,66 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     })}
                 </div>
             )}
+            {/* Voting Status */}
+            <div style={{
+                textAlign: 'center',
+                marginBottom: '0.5rem',
+                padding: '8px 16px',
+                background: 'rgba(255,255,255,0.8)',
+                borderRadius: '8px',
+                fontSize: '0.9rem'
+            }}>
+                <span style={{ fontWeight: 'bold' }}>投票状況: </span>
+                <span style={{
+                    color: votedCount === totalPlayers ? '#4CAF50' : '#FF9800',
+                    fontWeight: 'bold'
+                }}>
+                    {votedCount} / {totalPlayers} 人完了
+                </span>
+            </div>
 
-            <button className="btn-primary" style={{ width: '100%', background: phase === 'DISCUSSION' ? '#FF4081' : undefined }} onClick={handleSubmit}>
-                {phase === 'DISCUSSION' ? '決定して結果を見る（修正不可）' : '投票する'}
-            </button>
+            {/* Vote Button or Voted Indicator */}
+            {hasIVoted ? (
+                <div style={{
+                    width: '100%',
+                    padding: '1rem',
+                    background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
+                    color: 'white',
+                    textAlign: 'center',
+                    borderRadius: 'var(--radius-md)',
+                    fontWeight: 'bold',
+                    fontSize: '1.2rem',
+                    boxShadow: '0 4px 12px rgba(76, 175, 80, 0.4)'
+                }}>
+                    ✅ 投票完了！他の人を待っています...
+                </div>
+            ) : (
+                <button className="btn-primary" style={{ width: '100%', background: phase === 'DISCUSSION' ? '#FF4081' : undefined }} onClick={handleSubmit}>
+                    {phase === 'DISCUSSION' ? '決定して結果を見る（修正不可）' : '投票する'}
+                </button>
+            )}
+
+            {/* Host Force Progress Button */}
+            {isHost && votedCount < totalPlayers && (
+                <button
+                    onClick={onForceProgress}
+                    style={{
+                        width: '100%',
+                        marginTop: '0.75rem',
+                        padding: '0.75rem',
+                        background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)',
+                        color: 'white',
+                        border: '2px solid white',
+                        borderRadius: 'var(--radius-md)',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        fontSize: '0.95rem',
+                        boxShadow: '0 4px 12px rgba(255, 152, 0, 0.4)'
+                    }}
+                >
+                    ⚡ 強制進行（未投票者はランダム配置）
+                </button>
+            )}
 
             <button
                 onClick={onLeave}
