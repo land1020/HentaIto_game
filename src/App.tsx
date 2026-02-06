@@ -48,6 +48,7 @@ function App() {
   const [discussionVoted, setDiscussionVoted] = useState<Record<string, boolean>>({}); // playerId -> true
   const [roundResults, setRoundResults] = useState<any[]>([]);
   const [gameHistory, setGameHistory] = useState<RoundResult[][]>([]); // Full history
+  const [currentTurnPlayerId, setCurrentTurnPlayerId] = useState<string | null>(null);
 
   // Navigation Logic
   // Initial Entry -> Lobby
@@ -88,6 +89,7 @@ function App() {
     setDiscussionVoted(newState.discussionVoted || {});
     setRoundResults(newState.roundResults || []);
     setGameHistory(newState.gameHistory || []);
+    setCurrentTurnPlayerId(newState.currentTurnPlayerId || null);
   };
 
   const { isHost, syncState, syncMyPlayer, submitMyGuess, submitSharedMemo, submitDiscussionDone } = useGameSync({
@@ -298,11 +300,12 @@ function App() {
       let num;
       do { num = Math.floor(Math.random() * 100) + 1; } while (usedNumbers.has(num));
       usedNumbers.add(num);
-      return { ...p, targetNumber: num, isHost: false, handPosition: null };
+      return { ...p, targetNumber: num, handPosition: null }; // Maintain isHost
     });
 
-    const hostIdx = rIndex % newPlayers.length;
-    newPlayers[hostIdx].isHost = true;
+    // Randomly select Turn Player (Theme Selector)
+    const turnPlayerIdx = Math.floor(Math.random() * newPlayers.length);
+    const nextTurnPlayerId = newPlayers[turnPlayerIdx].id;
 
     // 2. Prepare Theme Selection
     let pool: Theme[] = [];
@@ -344,7 +347,8 @@ function App() {
         settings: currentSettings,
         roundCount: rIndex,
         sharedMemos: {},
-        allGuesses: {}
+        allGuesses: {},
+        currentTurnPlayerId: nextTurnPlayerId
       });
     } else {
       // Local Update
@@ -353,6 +357,7 @@ function App() {
       setUsedThemeTexts(nextUsedTexts);
       setSharedMemos({});
       setAllGuesses({});
+      setCurrentTurnPlayerId(nextTurnPlayerId);
       setCurrentPhase('SETTING');
     }
   };
@@ -910,10 +915,11 @@ function App() {
         />
       );
     case 'SETTING':
+      const turnPlayer = players.find(p => p.id === currentTurnPlayerId);
       return (
         <ThemeSelectionScreen
-          hostName={hostPlayer?.name || 'Host'}
-          isHost={amIHost}
+          hostName={turnPlayer?.name || 'Player'}
+          isHost={myPlayerId === currentTurnPlayerId}
           gameMode={gameSettings.gameMode}
           candidates={themeCandidates}
           onSelect={handleThemeSelected}

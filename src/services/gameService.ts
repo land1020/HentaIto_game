@@ -12,6 +12,7 @@ export interface GameState {
     currentTheme: Theme | null;
     themeCandidates: Theme[];
     usedThemeTexts: string[]; // Store as array for DB
+    currentTurnPlayerId?: string | null;
     sharedMemos: Record<string, string>;
     allGuesses: Record<string, Record<string, number>>;
     discussionVoted?: Record<string, boolean>;
