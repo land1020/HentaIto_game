@@ -55,25 +55,32 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     // This prevents other players' adjustments from being shown during discussion
     const [discussionGuessesSnapshot, setDiscussionGuessesSnapshot] = useState<Record<string, Record<string, number>>>({});
 
-    // Sync placements and initialPlacements when transitioning to DISCUSSION phase
+    // Track previous phase to detect phase changes
+    const [prevPhase, setPrevPhase] = useState<'GAME' | 'DISCUSSION'>(phase);
+
+    // Reset state when phase changes (only runs on phase change, not on allGuesses updates)
     useEffect(() => {
-        if (phase === 'DISCUSSION' && allGuesses[myId]) {
+        if (phase !== prevPhase) {
+            setPrevPhase(phase);
+
+            if (phase === 'GAME') {
+                // Reset placements when going to GAME phase (e.g., new round)
+                setPlacements({});
+                setInitialPlacements({});
+                setDiscussionGuessesSnapshot({});
+            }
+        }
+    }, [phase, prevPhase]);
+
+    // Sync placements for DISCUSSION phase (only when entering discussion, not on every allGuesses update)
+    useEffect(() => {
+        if (phase === 'DISCUSSION' && allGuesses[myId] && Object.keys(discussionGuessesSnapshot).length === 0) {
+            // Only initialize once when first entering DISCUSSION phase
             setPlacements({ ...allGuesses[myId] });
             setInitialPlacements({ ...allGuesses[myId] });
-            // Only set snapshot once when entering DISCUSSION phase (if empty)
-            setDiscussionGuessesSnapshot(prev => {
-                if (Object.keys(prev).length === 0) {
-                    return { ...allGuesses };
-                }
-                return prev;
-            });
-        } else if (phase === 'GAME') {
-            // Reset placements when going back to GAME phase (e.g., new round)
-            setPlacements({});
-            setInitialPlacements({});
-            setDiscussionGuessesSnapshot({});
+            setDiscussionGuessesSnapshot({ ...allGuesses });
         }
-    }, [phase, allGuesses, myId]);
+    }, [phase, allGuesses, myId, discussionGuessesSnapshot]);
 
     const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
     // Initialize myWord from sharedMemos if available
