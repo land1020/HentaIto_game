@@ -241,3 +241,54 @@ button:active {
   width: 100%;
   border: 4px solid #fff;
 }
+
+/* Mobile Responsive Styles */
+@media screen and (max-width: 480px) {
+  .container {
+    width: 95%;
+    padding: 1rem;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    max-height: calc(100vh - 2rem);
+  }
+
+  .title {
+    font-size: 2.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .title-ito {
+    font-size: 3rem;
+  }
+
+  .input-field {
+    padding: 0.8rem;
+    font-size: 1rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .btn-primary {
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  .btn-accent {
+    padding: 12px 24px;
+    font-size: 1.1rem;
+  }
+}
+
+@media screen and (max-width: 360px) {
+  .container {
+    width: 98%;
+    padding: 0.75rem;
+  }
+
+  .title {
+    font-size: 2rem;
+  }
+
+  .title-ito {
+    font-size: 2.5rem;
+  }
+}

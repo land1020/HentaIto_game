@@ -318,8 +318,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                                 key={p.id}
                                 style={{
                                     display: 'flex',
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
+                                    flexDirection: 'column',
                                     padding: '0.6rem',
                                     background: isSelected
                                         ? `linear-gradient(135deg, ${p.color}33 0%, ${p.color}55 100%)`
@@ -328,36 +327,59 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                                     borderRadius: 'var(--radius-sm)',
                                     boxShadow: isSelected ? `0 4px 12px ${p.color}44` : '0 2px 4px rgba(0,0,0,0.1)',
                                     transition: 'all 0.2s ease',
-                                    gap: '0.5rem'
+                                    gap: '0.4rem'
                                 }}
                             >
-                                {/* Player selection area */}
+                                {/* Row 1: Player info and placement indicator */}
                                 <div
                                     onClick={() => handleSelectPlayer(p.id)}
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
+                                        justifyContent: 'space-between',
                                         cursor: 'pointer',
-                                        minWidth: '100px',
-                                        flexShrink: 0
+                                        width: '100%'
                                     }}
                                 >
-                                    <div style={{
-                                        width: '16px',
-                                        height: '16px',
-                                        borderRadius: '50%',
-                                        background: p.color,
-                                        marginRight: '6px',
-                                        border: '2px solid white',
-                                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                                    }}></div>
-                                    <span style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>
-                                        {p.title && p.title !== '新人' ? `${p.title} ${p.name}` : p.name}
-                                    </span>
-                                    {p.isHost && <span style={{ fontSize: '0.6rem', background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', color: '#333', padding: '2px 5px', borderRadius: '6px', fontWeight: 'bold', marginLeft: '4px' }}>👑親</span>}
+                                    <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                                        <div style={{
+                                            width: '16px',
+                                            height: '16px',
+                                            borderRadius: '50%',
+                                            background: p.color,
+                                            marginRight: '6px',
+                                            border: '2px solid white',
+                                            boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                            flexShrink: 0
+                                        }}></div>
+                                        <span style={{
+                                            fontWeight: 'bold',
+                                            fontSize: '0.85rem',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap'
+                                        }}>
+                                            {p.title && p.title !== '新人' ? `${p.title} ${p.name}` : p.name}
+                                        </span>
+                                        {p.isHost && <span style={{ fontSize: '0.6rem', background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', color: '#333', padding: '2px 5px', borderRadius: '6px', fontWeight: 'bold', marginLeft: '4px', flexShrink: 0 }}>👑親</span>}
+                                    </div>
+
+                                    {/* Placement indicator */}
+                                    {isPlaced && (
+                                        <span style={{
+                                            fontSize: '0.85rem',
+                                            fontWeight: 'bold',
+                                            color: 'white',
+                                            background: '#4CAF50',
+                                            padding: '3px 8px',
+                                            borderRadius: '8px',
+                                            flexShrink: 0,
+                                            marginLeft: '8px'
+                                        }}>✓ {placements[p.id]}</span>
+                                    )}
                                 </div>
 
-                                {/* Memo input */}
+                                {/* Row 2: Memo input - full width */}
                                 <input
                                     type="text"
                                     className="input-field"
@@ -365,8 +387,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                                         fontSize: '0.85rem',
                                         padding: '8px 10px',
                                         margin: 0,
-                                        flex: 1,
-                                        minWidth: 0,
+                                        width: '100%',
                                         boxSizing: 'border-box',
                                         background: 'rgba(255,255,255,0.95)',
                                         border: '1px solid rgba(0,0,0,0.15)',
@@ -378,19 +399,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                                     onClick={(e) => e.stopPropagation()}
                                     onFocus={(e) => e.stopPropagation()}
                                 />
-
-                                {/* Placement indicator */}
-                                {isPlaced && (
-                                    <span style={{
-                                        fontSize: '0.9rem',
-                                        fontWeight: 'bold',
-                                        color: 'white',
-                                        background: '#4CAF50',
-                                        padding: '4px 10px',
-                                        borderRadius: '10px',
-                                        flexShrink: 0
-                                    }}>✓ {placements[p.id]}</span>
-                                )}
                             </div>
                         );
                     })}
