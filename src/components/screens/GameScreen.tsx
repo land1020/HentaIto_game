@@ -43,13 +43,25 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         return {};
     });
 
-    // Keep track of initial placements to detect changes
-    const [initialPlacements] = useState<Record<string, number>>(() => {
+    // Keep track of initial placements to detect changes (using ref to update when phase changes)
+    const [initialPlacements, setInitialPlacements] = useState<Record<string, number>>(() => {
         if (phase === 'DISCUSSION' && allGuesses[myId]) {
             return { ...allGuesses[myId] };
         }
         return {};
     });
+
+    // Sync placements and initialPlacements when transitioning to DISCUSSION phase
+    useEffect(() => {
+        if (phase === 'DISCUSSION' && allGuesses[myId]) {
+            setPlacements({ ...allGuesses[myId] });
+            setInitialPlacements({ ...allGuesses[myId] });
+        } else if (phase === 'GAME') {
+            // Reset placements when going back to GAME phase (e.g., new round)
+            setPlacements({});
+            setInitialPlacements({});
+        }
+    }, [phase, allGuesses, myId]);
 
     const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
     // Initialize myWord from sharedMemos if available

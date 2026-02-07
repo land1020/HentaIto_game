@@ -662,20 +662,8 @@ function App() {
       if (currentPhase === 'DISCUSSION') {
         await submitDiscussionDone();
       }
-
-      // Handle phase transitions
-      if (currentPhase === 'DISCUSSION') {
-        // In DISCUSSION phase, after submitting final votes, host calculates results
-        if (isHost) {
-          // Wait a moment for votes to sync, then calculate
-          setTimeout(() => {
-            // Use current allGuesses merged with my latest placements
-            const finalGuesses = { ...allGuesses, [myPlayerId]: myPlacements };
-            calculateAndShowResults(finalGuesses);
-          }, 500);
-        }
-      }
-      // For GAME phase, the useEffect handles the transition
+      // Note: Phase transitions are handled by the useEffect that monitors allGuesses and discussionVoted
+      // This ensures we wait for ALL players to vote before advancing
     } else {
       // Local Mode
       setSharedMemos(prev => ({ ...prev, p1: myWord }));
@@ -721,10 +709,12 @@ function App() {
     if (currentPhase === 'GAME') {
       if (gameSettings.isDiscussionEnabled) {
         // Go to discussion with filled guesses
+        // Reset discussionVoted so all players can vote again in discussion phase
         if (roomId) {
-          updateGameFn({ phase: 'DISCUSSION', allGuesses: finalGuesses });
+          updateGameFn({ phase: 'DISCUSSION', allGuesses: finalGuesses, discussionVoted: {} });
         } else {
           setAllGuesses(finalGuesses);
+          setDiscussionVoted({});
           setCurrentPhase('DISCUSSION');
         }
       } else {
@@ -732,7 +722,7 @@ function App() {
         calculateAndShowResults(finalGuesses);
       }
     } else if (currentPhase === 'DISCUSSION') {
-      // Go to results
+      // Go to results - use the finalGuesses which include random placements for non-voters
       calculateAndShowResults(finalGuesses);
     }
   };
