@@ -5,13 +5,21 @@ interface RankingListProps {
     players: Player[];
     showTitle?: boolean; // "最終結果" などのタイトルを表示するかどうか
     isDebug?: boolean;
+    roundResults?: any[]; // ラウンド結果（指定した場合はラウンドスコアでランキング）
 }
 
-export const RankingList: React.FC<RankingListProps> = ({ players, showTitle = false, isDebug = false }) => {
-    // Sort players by total score (descending)
-    // Note: The input players array should ideally be pre-sorted or we sort here. 
-    // Sorting here is safer for display consistency.
-    const rankedPlayers = [...players].sort((a, b) => b.score - a.score);
+export const RankingList: React.FC<RankingListProps> = ({ players, showTitle = false, isDebug = false, roundResults }) => {
+    // ラウンド結果がある場合は、そのラウンドのスコアでソート
+    // ない場合は累計スコア（score）でソート
+    const rankedPlayers = roundResults
+        ? [...players].sort((a, b) => {
+            const aResult = roundResults.find(r => r.playerId === a.id);
+            const bResult = roundResults.find(r => r.playerId === b.id);
+            const aScore = aResult ? aResult.scoreGain : 0;
+            const bScore = bResult ? bResult.scoreGain : 0;
+            return bScore - aScore;
+        })
+        : [...players].sort((a, b) => b.score - a.score);
 
     return (
         <div style={{ width: '100%' }}>
@@ -22,6 +30,10 @@ export const RankingList: React.FC<RankingListProps> = ({ players, showTitle = f
                     const isWinner = index === 0;
                     // Cast to final player structure if needed, or assume awards exist
                     const awards = (p as any).awards || [];
+
+                    // ラウンドモードの場合はラウンドスコアを表示
+                    const roundResult = roundResults?.find(r => r.playerId === p.id);
+                    const displayScore = roundResults ? (roundResult?.scoreGain ?? 0) : p.score;
 
                     return (
                         <div key={p.id} style={{
@@ -61,10 +73,16 @@ export const RankingList: React.FC<RankingListProps> = ({ players, showTitle = f
                                     </div>
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
-                                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-                                        {p.score}点
+                                    <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: roundResults && displayScore >= 0 ? 'inherit' : (roundResults ? 'var(--color-primary)' : 'inherit') }}>
+                                        {roundResults && displayScore > 0 ? '+' : ''}{displayScore}点
                                     </div>
-                                    {isDebug && (
+                                    {/* ラウンドモード時は累計スコアを表示 */}
+                                    {roundResults && (
+                                        <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '2px' }}>
+                                            累計: {p.cumulativeScore ?? p.score}点
+                                        </div>
+                                    )}
+                                    {isDebug && !roundResults && (
                                         <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>
                                             (累計: {p.cumulativeScore})
                                         </div>

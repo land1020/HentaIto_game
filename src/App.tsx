@@ -180,13 +180,25 @@ function App() {
     }
   };
 
-  const calculateTitle = (score: number) => {
+  // 二つ名の閾値を人数に応じて調整（4人を基準）
+  const calculateTitle = (score: number, playerCount: number = 4) => {
     const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+
+    // 基準は4人。人数が増えると1ラウンドあたりのスコア変動が大きくなるので閾値を調整
+    // 基準閾値（4人時）: -40, -80, -120, -160
+    // 例: 6人の場合、倍率 = 6/4 = 1.5 → 閾値は -60, -120, -180, -240
+    const scaleFactor = playerCount / 4;
+
+    const threshold1 = -40 * scaleFactor;  // NormalWords
+    const threshold2 = -80 * scaleFactor;  // AbnormalWords
+    const threshold3 = -120 * scaleFactor; // DangerWords
+    const threshold4 = -160 * scaleFactor; // DecoratorWords + DangerWords
+
     if (score >= 0) return pick(WinnerWords);
-    if (score <= -160) return pick(DecoratorWords) + pick(DangerWords);
-    if (score <= -120) return pick(DangerWords);
-    if (score <= -80) return pick(AbnormalWords);
-    if (score <= -40) return pick(NormalWords);
+    if (score <= threshold4) return pick(DecoratorWords) + pick(DangerWords);
+    if (score <= threshold3) return pick(DangerWords);
+    if (score <= threshold2) return pick(AbnormalWords);
+    if (score <= threshold1) return pick(NormalWords);
     return pick(NormalWords);
   };
 
@@ -589,14 +601,14 @@ function App() {
           score: finalScore,
           cumulativeScore: newCumulativeScore,
           awards: newAwards,
-          title: calculateTitle(finalScore) // Update title based on FINAL score (with all bonuses)
+          title: calculateTitle(finalScore, tempPlayers.length) // Update title based on FINAL score (with all bonuses)
         };
       }
       return {
         ...p,
         score: finalScore,
         cumulativeScore: newCumulativeScore,
-        title: calculateTitle(finalScore) // Use final score for title
+        title: calculateTitle(finalScore, tempPlayers.length) // Use final score for title
       };
     });
 
@@ -772,7 +784,7 @@ function App() {
           score: baseScore,
           scoreHistory: scoreHistoryArr,
           awards: [],
-          title: calculateTitle(p.cumulativeScore || 0)
+          title: calculateTitle(p.cumulativeScore || 0, players.length)
         };
       });
 

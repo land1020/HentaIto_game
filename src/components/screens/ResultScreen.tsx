@@ -26,9 +26,9 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({ players, results, on
             {/* Current Standing / Projected Final Result */}
             <div style={{ marginBottom: '2rem' }}>
                 <div style={{ textAlign: 'center', fontWeight: 'bold', marginBottom: '0.5rem', color: '#666' }}>
-                    --- 現在の総合順位 ---
+                    --- 今回のラウンド結果 ---
                 </div>
-                <RankingList players={players} showTitle={false} isDebug={isDebug} />
+                <RankingList players={players} showTitle={false} isDebug={isDebug} roundResults={results} />
             </div>
 
             <div style={{ textAlign: 'center', marginBottom: '1.5rem', background: 'white', padding: '1rem', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-sm)' }}>
