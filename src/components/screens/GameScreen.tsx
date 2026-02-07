@@ -51,15 +51,27 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         return {};
     });
 
+    // Snapshot of allGuesses at the start of discussion phase
+    // This prevents other players' adjustments from being shown during discussion
+    const [discussionGuessesSnapshot, setDiscussionGuessesSnapshot] = useState<Record<string, Record<string, number>>>({});
+
     // Sync placements and initialPlacements when transitioning to DISCUSSION phase
     useEffect(() => {
         if (phase === 'DISCUSSION' && allGuesses[myId]) {
             setPlacements({ ...allGuesses[myId] });
             setInitialPlacements({ ...allGuesses[myId] });
+            // Only set snapshot once when entering DISCUSSION phase (if empty)
+            setDiscussionGuessesSnapshot(prev => {
+                if (Object.keys(prev).length === 0) {
+                    return { ...allGuesses };
+                }
+                return prev;
+            });
         } else if (phase === 'GAME') {
             // Reset placements when going back to GAME phase (e.g., new round)
             setPlacements({});
             setInitialPlacements({});
+            setDiscussionGuessesSnapshot({});
         }
     }, [phase, allGuesses, myId]);
 
@@ -401,11 +413,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     <h3 style={{ fontSize: '1rem', marginBottom: '1rem', textAlign: 'center' }}>みんなの予想（世界観）</h3>
 
                     {otherPlayers.map(guesser => {
-                        // Build icons based on THIS guesser's logic
-                        const myGuessMap = allGuesses[guesser.id];
-                        if (!myGuessMap) return null;
+                        // Use snapshot to prevent showing other players' adjustments during discussion
+                        const snapshotGuessMap = discussionGuessesSnapshot[guesser.id];
+                        if (!snapshotGuessMap) return null;
 
-                        const worldIcons = Object.entries(myGuessMap).map(([targetId, val]) => {
+                        const worldIcons = Object.entries(snapshotGuessMap).map(([targetId, val]) => {
                             const target = players.find(p => p.id === targetId);
                             if (!target) return null;
                             return {
