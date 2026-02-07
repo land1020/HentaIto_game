@@ -49,6 +49,7 @@ function App() {
   const [roundResults, setRoundResults] = useState<any[]>([]);
   const [gameHistory, setGameHistory] = useState<RoundResult[][]>([]); // Full history
   const [currentTurnPlayerId, setCurrentTurnPlayerId] = useState<string | null>(null);
+  const [pastTurnPlayerIds, setPastTurnPlayerIds] = useState<string[]>([]); // Track past theme selectors
 
   // Navigation Logic
   // Initial Entry -> Lobby
@@ -90,6 +91,7 @@ function App() {
     setRoundResults(newState.roundResults || []);
     setGameHistory(newState.gameHistory || []);
     setCurrentTurnPlayerId(newState.currentTurnPlayerId || null);
+    setPastTurnPlayerIds(newState.pastTurnPlayerIds || []);
   };
 
   const { isHost, syncState, syncMyPlayer, submitMyGuess, submitSharedMemo, submitDiscussionDone, submitThemeSelect } = useGameSync({
@@ -210,6 +212,8 @@ function App() {
 
       // Online: We need to trigger startRound logic here too
       // startRound will handle the rest via updateGameFn
+      // Reset past turn player IDs for new game
+      setPastTurnPlayerIds([]);
       startRound(numPlayers, 0, settings);
 
     } else {
@@ -235,6 +239,7 @@ function App() {
       const allPlayers = [me, ...npcs];
       setPlayers(allPlayers);
       setRoundCount(0);
+      setPastTurnPlayerIds([]); // Reset for new game
       startRound(allPlayers, 0, settings);
     }
   };
@@ -303,9 +308,19 @@ function App() {
       return { ...p, targetNumber: num, handPosition: null }; // Maintain isHost
     });
 
-    // Randomly select Turn Player (Theme Selector)
-    const turnPlayerIdx = Math.floor(Math.random() * newPlayers.length);
-    const nextTurnPlayerId = newPlayers[turnPlayerIdx].id;
+    // Randomly select Turn Player (Theme Selector) - avoiding past selectors
+    let eligiblePlayers = newPlayers.filter(p => !pastTurnPlayerIds.includes(p.id));
+    let nextPastTurnPlayerIds = [...pastTurnPlayerIds];
+
+    // If all players have been selected, reset the list
+    if (eligiblePlayers.length === 0) {
+      eligiblePlayers = newPlayers;
+      nextPastTurnPlayerIds = [];
+    }
+
+    const turnPlayerIdx = Math.floor(Math.random() * eligiblePlayers.length);
+    const nextTurnPlayerId = eligiblePlayers[turnPlayerIdx].id;
+    nextPastTurnPlayerIds.push(nextTurnPlayerId);
 
     // 2. Prepare Theme Selection
     let pool: Theme[] = [];
@@ -348,7 +363,8 @@ function App() {
         roundCount: rIndex,
         sharedMemos: {},
         allGuesses: {},
-        currentTurnPlayerId: nextTurnPlayerId
+        currentTurnPlayerId: nextTurnPlayerId,
+        pastTurnPlayerIds: nextPastTurnPlayerIds
       });
     } else {
       // Local Update
@@ -358,6 +374,7 @@ function App() {
       setSharedMemos({});
       setAllGuesses({});
       setCurrentTurnPlayerId(nextTurnPlayerId);
+      setPastTurnPlayerIds(nextPastTurnPlayerIds);
       setCurrentPhase('SETTING');
     }
   };
@@ -799,12 +816,14 @@ function App() {
         allGuesses: {},
         sharedMemos: {},
         currentTheme: null,
-        usedThemeTexts: [] // Reset used themes
+        usedThemeTexts: [], // Reset used themes
+        pastTurnPlayerIds: [] // Reset past turn players
       });
     } else {
       setRoundCount(0);
       setPlayers([]);
       setRoundResults([]);
+      setPastTurnPlayerIds([]); // Reset past turn players
       setCurrentPhase('LOBBY');
       // Local mode usually redirects to Entry if players are cleared?
       // Check useEffect for PHASE LOBBY

@@ -67,25 +67,47 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ roomId, players, myPla
             <div style={{ marginBottom: '2rem' }}>
                 <h3>あなたのカラー</h3>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', background: 'white', padding: '1rem', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-sm)' }}>
-                    {COLORS.map((c) => (
-                        <button
-                            key={c.code}
-                            onClick={() => onUpdateColor(c.code)}
-                            style={{
-                                width: '40px',
-                                height: '40px',
-                                borderRadius: '50%',
-                                background: c.code,
-                                border: myColor === c.code ? '4px solid var(--color-text)' : '2px solid #ddd',
-                                transform: myColor === c.code ? 'scale(1.1)' : 'scale(1)',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                            }}
-                            title={c.name}
-                        />
-                    ))}
+                    {COLORS.map((c) => {
+                        // Check if this color is used by another player
+                        const usedByOther = participants.some(p => p.id !== myPlayerId && p.color === c.code);
+                        const isMyColor = myColor === c.code;
+
+                        return (
+                            <button
+                                key={c.code}
+                                onClick={() => !usedByOther && onUpdateColor(c.code)}
+                                disabled={usedByOther}
+                                style={{
+                                    width: '40px',
+                                    height: '40px',
+                                    borderRadius: '50%',
+                                    background: c.code,
+                                    border: isMyColor ? '4px solid var(--color-text)' : '2px solid #ddd',
+                                    transform: isMyColor ? 'scale(1.1)' : 'scale(1)',
+                                    cursor: usedByOther ? 'not-allowed' : 'pointer',
+                                    transition: 'all 0.2s',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                    opacity: usedByOther ? 0.3 : 1,
+                                    position: 'relative'
+                                }}
+                                title={usedByOther ? `${c.name}（使用中）` : c.name}
+                            >
+                                {usedByOther && (
+                                    <span style={{
+                                        position: 'absolute',
+                                        top: '50%',
+                                        left: '50%',
+                                        transform: 'translate(-50%, -50%)',
+                                        fontSize: '1.2rem',
+                                        color: '#666',
+                                        textShadow: '0 0 2px white'
+                                    }}>✕</span>
+                                )}
+                            </button>
+                        );
+                    })}
                 </div>
+                <p style={{ fontSize: '0.8rem', color: '#666', marginTop: '8px' }}>※ 他のプレイヤーが使用中の色は選択できません</p>
             </div>
 
             <div style={{ marginBottom: '2rem' }}>

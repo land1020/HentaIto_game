@@ -13,6 +13,7 @@ export interface GameState {
     themeCandidates: Theme[];
     usedThemeTexts: string[]; // Store as array for DB
     currentTurnPlayerId?: string | null;
+    pastTurnPlayerIds?: string[]; // Track players who have already been theme selectors
     sharedMemos: Record<string, string>;
     allGuesses: Record<string, Record<string, number>>;
     discussionVoted?: Record<string, boolean>;

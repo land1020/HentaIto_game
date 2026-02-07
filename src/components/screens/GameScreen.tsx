@@ -280,6 +280,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                         <span style={{ fontWeight: 'bold' }}>
                             {myPlayer.title && myPlayer.title !== '新人' ? `${myPlayer.title} ${myPlayer.name}` : myPlayer.name}
                         </span>
+                        {myPlayer.isHost && <span style={{ fontSize: '0.65rem', background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', color: '#333', padding: '2px 6px', borderRadius: '8px', fontWeight: 'bold', marginLeft: '4px' }}>👑親</span>}
                         <span style={{ fontSize: '0.7rem', background: '#4CAF50', color: 'white', padding: '2px 6px', borderRadius: '8px' }}>あなた</span>
                     </div>
                     <span style={{
@@ -353,6 +354,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                                     <span style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>
                                         {p.title && p.title !== '新人' ? `${p.title} ${p.name}` : p.name}
                                     </span>
+                                    {p.isHost && <span style={{ fontSize: '0.6rem', background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', color: '#333', padding: '2px 5px', borderRadius: '6px', fontWeight: 'bold', marginLeft: '4px' }}>👑親</span>}
                                 </div>
 
                                 {/* Memo input */}
