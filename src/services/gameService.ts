@@ -144,6 +144,12 @@ export const submitGuess = async (roomId: string, guesserId: string, targetId: s
     await update(ref(database, path), { [targetId]: value });
 };
 
+// Submit all guesses at once to prevent race conditions
+export const submitAllGuesses = async (roomId: string, guesserId: string, placements: Record<string, number>) => {
+    const path = `rooms/${roomId}/allGuesses/${guesserId}`;
+    await set(ref(database, path), placements);
+};
+
 export const submitMemo = async (roomId: string, playerId: string, memo: string) => {
     const path = `rooms/${roomId}/sharedMemos`;
     await update(ref(database, path), { [playerId]: memo });

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { subscribeToRoom, updateGameState, updatePlayer, type GameState, submitGuess, submitMemo, submitDiscussionCompletion, submitThemeSelection } from '../services/gameService';
+import { subscribeToRoom, updateGameState, updatePlayer, type GameState, submitGuess, submitMemo, submitDiscussionCompletion, submitThemeSelection, submitAllGuesses } from '../services/gameService';
 import type { Player } from '../types/game';
 import type { Theme } from '../data/themes';
 
@@ -54,6 +54,12 @@ export const useGameSync = ({ roomId, myPlayerId, onStateChange }: UseGameSyncPr
         await submitGuess(roomId, myPlayerId, targetId, value);
     };
 
+    // Submit all guesses at once to prevent race conditions
+    const submitMyAllGuesses = async (placements: Record<string, number>) => {
+        if (!roomId || !myPlayerId) return;
+        await submitAllGuesses(roomId, myPlayerId, placements);
+    };
+
     const submitSharedMemo = async (targetId: string, memo: string) => {
         if (!roomId || !myPlayerId) return;
         await submitMemo(roomId, targetId, memo);
@@ -74,6 +80,7 @@ export const useGameSync = ({ roomId, myPlayerId, onStateChange }: UseGameSyncPr
         syncState,
         syncMyPlayer,
         submitMyGuess,
+        submitMyAllGuesses,
         submitSharedMemo,
         submitDiscussionDone,
         submitThemeSelect

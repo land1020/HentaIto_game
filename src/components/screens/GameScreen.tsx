@@ -16,6 +16,7 @@ interface GameScreenProps {
     onUpdateMemo?: (id: string, text: string) => void;
     isHost?: boolean;
     discussionVoted?: Record<string, boolean>;
+    turnPlayerId?: string | null; // The "親" (theme selector) for current round
 }
 
 export const GameScreen: React.FC<GameScreenProps> = ({
@@ -30,7 +31,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     sharedMemos = {},
     onUpdateMemo,
     isHost = false,
-    discussionVoted = {}
+    discussionVoted = {},
+    turnPlayerId = null
 }) => {
     const myPlayer = players.find(p => p.id === myId);
     const otherPlayers = players.filter(p => p.id !== myId);
@@ -280,7 +282,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                         <span style={{ fontWeight: 'bold' }}>
                             {myPlayer.title && myPlayer.title !== '新人' ? `${myPlayer.title} ${myPlayer.name}` : myPlayer.name}
                         </span>
-                        {myPlayer.isHost && <span style={{ fontSize: '0.65rem', background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', color: '#333', padding: '2px 6px', borderRadius: '8px', fontWeight: 'bold', marginLeft: '4px' }}>👑親</span>}
+                        {myPlayer.id === turnPlayerId && <span style={{ fontSize: '0.65rem', background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', color: '#333', padding: '2px 6px', borderRadius: '8px', fontWeight: 'bold', marginLeft: '4px' }}>👑親</span>}
                         <span style={{ fontSize: '0.7rem', background: '#4CAF50', color: 'white', padding: '2px 6px', borderRadius: '8px' }}>あなた</span>
                     </div>
                     <span style={{
@@ -361,7 +363,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                                         }}>
                                             {p.title && p.title !== '新人' ? `${p.title} ${p.name}` : p.name}
                                         </span>
-                                        {p.isHost && <span style={{ fontSize: '0.6rem', background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', color: '#333', padding: '2px 5px', borderRadius: '6px', fontWeight: 'bold', marginLeft: '4px', flexShrink: 0 }}>👑親</span>}
+                                        {p.id === turnPlayerId && <span style={{ fontSize: '0.6rem', background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', color: '#333', padding: '2px 5px', borderRadius: '6px', fontWeight: 'bold', marginLeft: '4px', flexShrink: 0 }}>👑親</span>}
                                     </div>
 
                                     {/* Placement indicator */}

@@ -94,7 +94,7 @@ function App() {
     setPastTurnPlayerIds(newState.pastTurnPlayerIds || []);
   };
 
-  const { isHost, syncState, syncMyPlayer, submitMyGuess, submitSharedMemo, submitDiscussionDone, submitThemeSelect } = useGameSync({
+  const { isHost, syncState, syncMyPlayer, submitMyAllGuesses, submitSharedMemo, submitDiscussionDone, submitThemeSelect } = useGameSync({
     roomId: roomId || null,
     myPlayerId: myPlayerId || null,
     onStateChange: handleOnlineStateChange
@@ -105,20 +105,35 @@ function App() {
   useEffect(() => {
     // Host Logic: Check if we should advance from GAME to DISCUSSION or RESULT
     if (roomId && isHost) {
-      const allVoted = players.length > 0 && Object.keys(allGuesses).length === players.length;
+      // Check if all players have voted with complete data
+      // Each voter should have placements for all other players (players.length - 1 targets)
+      const expectedTargetCount = players.length - 1;
+      const allVotedWithCompleteData = players.length > 0 &&
+        Object.keys(allGuesses).length === players.length &&
+        Object.values(allGuesses).every(placements =>
+          Object.keys(placements).length === expectedTargetCount
+        );
 
-      if (allVoted && currentPhase === 'GAME') {
-        if (gameSettings.isDiscussionEnabled) {
-          updateGameFn({ phase: 'DISCUSSION', discussionVoted: {} });
-        } else {
-          calculateAndShowResults(allGuesses);
-        }
+      if (allVotedWithCompleteData && currentPhase === 'GAME') {
+        // Add small delay to ensure Firebase sync is complete
+        const timer = setTimeout(() => {
+          if (gameSettings.isDiscussionEnabled) {
+            updateGameFn({ phase: 'DISCUSSION', discussionVoted: {} });
+          } else {
+            calculateAndShowResults(allGuesses);
+          }
+        }, 100);
+        return () => clearTimeout(timer);
       }
 
       if (currentPhase === 'DISCUSSION') {
         const allDiscussed = players.length > 0 && Object.keys(discussionVoted).length === players.length;
         if (allDiscussed) {
-          calculateAndShowResults(allGuesses);
+          // Add small delay to ensure Firebase sync is complete
+          const timer = setTimeout(() => {
+            calculateAndShowResults(allGuesses);
+          }, 100);
+          return () => clearTimeout(timer);
         }
       }
     }
@@ -670,11 +685,9 @@ function App() {
 
   const handleVote = async (myPlacements: Record<string, number>, myWord: string) => {
     if (roomId) {
-      // Online Mode
+      // Online Mode - Submit all guesses at once to prevent race conditions
       await submitSharedMemo(myPlayerId!, myWord);
-      for (const [targetId, val] of Object.entries(myPlacements)) {
-        await submitMyGuess(targetId, val);
-      }
+      await submitMyAllGuesses(myPlacements);
       // If discussion, mark done
       if (currentPhase === 'DISCUSSION') {
         await submitDiscussionDone();
@@ -948,6 +961,7 @@ function App() {
           onUpdateMemo={handleUpdateMemo}
           isHost={amIHost}
           discussionVoted={discussionVoted}
+          turnPlayerId={currentTurnPlayerId}
         />
       );
     case 'RESULT':
