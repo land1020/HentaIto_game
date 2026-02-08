@@ -1,42 +1,46 @@
-# お題モード設定の拡張計画
+# 結果発表画面スコア表示・順位判定ロジック修正計画
 
-ロビー設定の「お題モード」が「自動選出」のときに、親プレイヤーがオリジナルのお題を手動入力できるオプションを追加します。
+ユーザーの要望に基づき、結果発表画面における順位判定とスコア加算のロジックを修正します。また、累計スコアを非表示にします。
 
 ## User Review Required
-- 特になし
-    > [!NOTE]
-    > 「自動選出される2つのお題のした側にオリジナルワードを入力できる」という要望に基づき、AUTOモードの画面内に手動入力フォームを追加します。
+- **順位判定基準の変更**:
+    -   これまでは「累計スコア」で順位を決めていましたが、「**今回のラウンドスコア + 特別賞**」で順位を判定するように変更します。
+- **順位ボーナスの適用順序**:
+    -   上記で決定した順位に基づいて、順位ボーナス（1位+100点など）を加算します。
+- **累計スコア非表示**:
+    -   結果発表画面（`RankingList`）では累計スコアを表示しません。
 
 ## Proposed Changes
 
-### UI Components
-
-#### [MODIFY] [LobbyScreen.tsx](file:///c:/Users/landk/OneDrive/Desktop/game/HentaIto/src/components/screens/LobbyScreen.tsx)
-- `GameSettings` インターフェースに `allowOriginalInAuto: boolean` を追加します。
-- `settings` state の初期値に `allowOriginalInAuto: false` を追加します。
-- 「自動選出」ラジオボタンが選択されている場合に、「オリジナルも入力可能にする（親入力）」のチェックボックスを表示するUIを追加します。
+### Logic Update
 
 #### [MODIFY] [App.tsx](file:///c:/Users/landk/OneDrive/Desktop/game/HentaIto/src/App.tsx)
-- `gameSettings` state の初期値に `allowOriginalInAuto: false` を追加します。
-- `ThemeSelectionScreen` コンポーネントに `allowOriginalInAuto` プロパティを渡すように変更します。
+-   `calculateTotalScore` 関数内の処理順序を変更します。
+    1.  **基本点算出**: 履歴から累計スコアを計算し、今回のラウンド素点 (`scoreGain`) を特定。
+    2.  **特別賞算出**: 従来通り計算し、`awards` に追加。ボーナス点を加算した「順位判定用スコア」 (`tempScore`) を算出。
+    3.  **順位判定**: `tempScore` の降順でソートし、順位を確定。
+    4.  **順位ボーナス加算**: 確定した順位に基づいて順位ボーナス (`rankBonuses`) を加算し、`awards` に追加。
+    5.  **最終スコア確定**: 「順位判定用スコア」+「順位ボーナス」を今回のラウンドの最終獲得スコアとし、累計スコアに加算。
 
-#### [MODIFY] [ThemeSelectionScreen.tsx](file:///c:/Users/landk/OneDrive/Desktop/game/HentaIto/src/components/screens/ThemeSelectionScreen.tsx)
-- `ThemeSelectionScreenProps` に `allowOriginalInAuto: boolean` を追加します。
-- `gameMode === 'AUTO'` のレンダリング部分において、`allowOriginalInAuto` が `true` の場合、候補リストの下に「オリジナルのお題を入力する」セクションを追加します。
-- このセクションでは、`ORIGINAL` モードと同様の入力フォーム（お題、最小値、最大値）を提供し、入力されたお題で決定できるようにします。
+### UI Components
+
+#### [MODIFY] [RankingList.tsx](file:///c:/Users/landk/OneDrive/Desktop/game/HentaIto/src/components/ui/RankingList.tsx)
+-   **スコア表示**:
+    -   `roundResults` がある場合（ラウンド結果表示時）、そのプレイヤーの「今回のラウンド最終獲得スコア」を表示するように変更。
+        -   注: `roundResults` には素点 (`scoreGain`) しか含まれていないため、`players` オブジェクトが持つ今回の獲得スコア（もし保持していれば）を参照するか、`roundResults` と `awards` から計算する必要がある。
+        -   `App.tsx` で計算された `players` の状態（`awards` などを含む）を利用するのが最も確実。
+-   **ソート順序**:
+    -   `roundResults` がある場合は、「今回のラウンド最終獲得スコア」の降順で表示する（すでに `App.tsx` でソートされていればそのまま表示、そうでなければソート）。
+-   **累計非表示**:
+    -   累計スコアの表示部分を削除。
 
 ## Verification Plan
 
 ### Manual Verification
-1.  **設定の確認**:
-    -   ロビー画面に入り、「お題モード」の「自動選出」を選択した状態で、「オリジナルも入力可能にする」チェックボックスが表示されることを確認する。
-    -   チェックボックスをONにして設定を変更する。
-
-2.  **ゲーム開始後の動作確認**:
-    -   （デバッグモードでNPCを追加するなどして）ゲームを開始する。
-    -   親プレイヤーとしてテーマ選択画面が表示された際、自動選出された2つの候補が表示されていることを確認する。
-    -   その下に、オリジナルお題の入力フォームが表示されていることを確認する。
-    -   オリジナルお題を入力し、「決定」ボタンを押してゲームが進行することを確認する。
-
-3.  **無効時の動作確認**:
-    -   ロビー設定で「オリジナルも入力可能にする」をOFFにしてゲームを開始し、入力フォームが表示されないことを確認する。
+1.  **ロジック確認**:
+    -   ゲームを実行し、わざと接戦または点差が開く状況を作る。
+    -   結果発表画面で、順位が「今回のラウンドスコア（素点+特別賞）」順になっているか確認する。
+    -   順位ボーナスが、その順位に対して正しく付与されているか確認する（1位に+100, 2位に+50...）。
+    -   「今回のラウンド結果」の合計点数が、「素点 + 特別賞 + 順位ボーナス」と一致しているか確認する。
+2.  **表示確認**:
+    -   累計スコアが表示されていないことを確認する。

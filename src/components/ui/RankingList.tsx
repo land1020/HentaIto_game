@@ -11,14 +11,11 @@ interface RankingListProps {
 export const RankingList: React.FC<RankingListProps> = ({ players, showTitle = false, isDebug = false, roundResults }) => {
     // ラウンド結果がある場合は、そのラウンドのスコアでソート
     // ない場合は累計スコア（score）でソート
+    // ラウンド結果がある場合は、そのラウンドのスコア（App.tsxで計算済み）でソート
+    // ない場合は累計スコア（score）でソート
+    // App.tsxのcalculateTotalScoreですでにソートされているはずだが、念のためここでもソート
     const rankedPlayers = roundResults
-        ? [...players].sort((a, b) => {
-            const aResult = roundResults.find(r => r.playerId === a.id);
-            const bResult = roundResults.find(r => r.playerId === b.id);
-            const aScore = aResult ? aResult.scoreGain : 0;
-            const bScore = bResult ? bResult.scoreGain : 0;
-            return bScore - aScore;
-        })
+        ? [...players].sort((a, b) => b.score - a.score)
         : [...players].sort((a, b) => b.score - a.score);
 
     return (
@@ -32,8 +29,8 @@ export const RankingList: React.FC<RankingListProps> = ({ players, showTitle = f
                     const awards = (p as any).awards || [];
 
                     // ラウンドモードの場合はラウンドスコアを表示
-                    const roundResult = roundResults?.find(r => r.playerId === p.id);
-                    const displayScore = roundResults ? (roundResult?.scoreGain ?? 0) : p.score;
+                    // App.tsxで計算された p.score が「今回のラウンド合計スコア」になっている
+                    const displayScore = roundResults ? p.score : p.score;
 
                     return (
                         <div key={p.id} style={{
@@ -76,12 +73,7 @@ export const RankingList: React.FC<RankingListProps> = ({ players, showTitle = f
                                     <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: roundResults && displayScore >= 0 ? 'inherit' : (roundResults ? 'var(--color-primary)' : 'inherit') }}>
                                         {roundResults && displayScore > 0 ? '+' : ''}{displayScore}点
                                     </div>
-                                    {/* ラウンドモード時は累計スコアを表示 */}
-                                    {roundResults && (
-                                        <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '2px' }}>
-                                            累計: {p.cumulativeScore ?? p.score}点
-                                        </div>
-                                    )}
+                                    {/* ラウンドモード時は累計スコアを表示しない */}
                                     {isDebug && !roundResults && (
                                         <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>
                                             (累計: {p.cumulativeScore})

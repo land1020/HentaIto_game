@@ -450,26 +450,27 @@ function App() {
   // Helper: Calculate total score with awards and rank bonuses
   const calculateTotalScore = (currentPlayers: Player[], history: RoundResult[][]) => {
     // 1. Calculate Base Scores & Initialize Awards
-    // Also update cumulativeScore (previous cumulative + this round's raw score)
     let tempPlayers = currentPlayers.map(p => {
       // Base score is sum of history (raw game scores) - ensure scoreHistory is an array
       const scoreHistoryArr = Array.isArray(p.scoreHistory) ? p.scoreHistory : [];
-      const baseScore = scoreHistoryArr.reduce((a, b) => a + b, 0);
       // Get the latest round's score (last item in history for this player)
       const latestRound = history.length > 0 ? history[history.length - 1] : [];
       const latestResult = latestRound.find((r: RoundResult) => r.playerId === p.id);
       const latestRoundScore = latestResult ? latestResult.scoreGain : 0;
-      // Update cumulative score: previous cumulative + this round's score
-      const newCumulativeScore = (p.cumulativeScore || 0) + latestRoundScore;
-      return { ...p, score: baseScore, cumulativeScore: newCumulativeScore, awards: [] as SpecialAward[], scoreHistory: scoreHistoryArr };
+
+      return {
+        ...p,
+        // Temp storage for this round's base score
+        currentRoundBaseScore: latestRoundScore,
+        awards: [] as SpecialAward[],
+        scoreHistory: scoreHistoryArr
+      };
     });
 
     const awardUpdates: Record<string, SpecialAward[]> = {};
     tempPlayers.forEach(p => awardUpdates[p.id] = []);
 
-    // 2. Special Awards Calculation (Same logic as before)
-    // True Understander / Zero Empathy
-
+    // 2. Special Awards Calculation
     // --- New Special Awards Calculation ---
     // 1. Calculate diff stats (Given vs Received)
     const playerGivenStats: Record<string, { diffSum: number, count: number }> = {};
@@ -501,9 +502,12 @@ function App() {
             playerReceivedStats[targetPlayerId].count += 1;
           }
 
-          // Perfect Match Check (retain existing logic)
+          // Perfect Match Check
           if (diff === 0 && tempPlayers.find(p => p.id === guesserId)) {
-            awardUpdates[guesserId].push({ name: 'ピッタリ賞', description: 'ズレ0で正解した', bonus: 20 });
+            const isSelfGuess = guesserId === targetPlayerId; // Should checks be added if self guess is possible? Logic implies no self guess in generateVotes.
+            if (!isSelfGuess) {
+              awardUpdates[guesserId].push({ name: 'ピッタリ賞', description: 'ズレ0で正解した', bonus: 20 });
+            }
           }
         });
       });
@@ -523,8 +527,6 @@ function App() {
       // Given (自分の予想)
       if (given.count > 0) {
         const avg = given.diffSum / given.count;
-        // Strict inequality to take first found or update if better? 
-        // Using < or > updates each time better is found.
         if (avg < minGivenAvg) { minGivenAvg = avg; bestUnderstanderId = p.id; }
         if (avg > maxGivenAvg) { maxGivenAvg = avg; worstGuesserId = p.id; }
       }
@@ -537,83 +539,87 @@ function App() {
       }
     });
 
-    // 3. Apply Awards (Avoid duplicating same person for opposite awards if logic allows, 
-    // but here criteria are distinct enough. Conflict resolution: unique awards per category?)
-
-    // 真の理解者: Given Diff Min (+20)
+    // 3. Apply Awards
     if (bestUnderstanderId) {
       awardUpdates[bestUnderstanderId].push({ name: '真の理解者', description: '自分の予想が最も正確', bonus: 20 });
     }
-    // ファーｗｗｗ: Given Diff Max (-20)
     if (worstGuesserId && worstGuesserId !== bestUnderstanderId) {
       awardUpdates[worstGuesserId].push({ name: 'ファーｗｗｗ', description: '自分の予想が最も不正確', bonus: -20 });
     }
-
-    // 共感者: Received Diff Min (+20)
     if (bestResonatorId) {
       awardUpdates[bestResonatorId].push({ name: '共感者', description: '周りからの予想が最も正確', bonus: 20 });
     }
-    // 共感性0: Received Diff Max (-20)
     if (worstResonatorId && worstResonatorId !== bestResonatorId) {
       awardUpdates[worstResonatorId].push({ name: '共感性0', description: '周りからの予想が最も不正確', bonus: -20 });
     }
 
-    // 3. Apply Awards & Sort for Ranking
-    tempPlayers = tempPlayers.map(p => {
+    // 4. Calculate Temp Score for Ranking (Round Base + Special Awards)
+    let rankedPlayers = tempPlayers.map(p => {
       const myAwards = awardUpdates[p.id] || [];
       const awardBonus = myAwards.reduce((sum, a) => sum + a.bonus, 0);
+      const tempRoundScore = (p as any).currentRoundBaseScore + awardBonus;
+
       return {
         ...p,
-        score: p.score + awardBonus,
-        awards: myAwards
+        awards: myAwards,
+        tempRoundScore: tempRoundScore
       };
     });
 
-    // Sort descending
-    tempPlayers.sort((a, b) => b.score - a.score);
+    // Sort by Temp Score (Descending) to determine Rank
+    rankedPlayers.sort((a, b) => b.tempRoundScore - a.tempRoundScore);
 
-    // 4. Apply Rank Bonuses (100, 50, 30) - Per Round? Or Accumulated?
-    // "Result announcement every time... rank score addition"
-    // If we re-calculate from scratch every time, we should only add "Current Rank Bonus" to the display score,
-    // NOT "Sum of all previous rank bonuses".
-    // Because if we sum proper index-based bonuses every round, the score would explode?
-    // User said "Final result... (at the end) NO special awards or rank addition".
-    // This implies that the score at the end IS the score.
-    // So we should add rank bonus to the score now.
+    // 5. Apply Rank Bonuses & Finalize Score
+    const rankBonuses = [100, 50, 30]; // 1st, 2nd, 3rd
 
-    // However, if we recalculate baseScore from scoreHistory (raw scores),
-    // we lose the "Rank Bonus" from previous rounds if we don't store it.
-    // So "Rank Bonus" should probably be treated as a "Current Standing Bonus" that is transient?
-    // OR we should save "Rank Bonus" into scoreHistory? No, scoreHistory is for raw game gain.
+    rankedPlayers = rankedPlayers.map((p, idx) => {
+      const rankBonus = rankBonuses[idx] || 0;
 
-    // Interpretation: Rank Bonus is added to the "Current Total Score" for display/final checking.
-    // It is valid for the current standing.
-    // So logic: Base + Awards + RankBonus = CurrentTotal.
+      // Final Round Score = Temp (Base + Awards) + Rank Bonus
+      const finalRoundScore = p.tempRoundScore + rankBonus;
 
-    const rankBonuses = [100, 50, 30];
-    tempPlayers = tempPlayers.map((p, idx) => {
-      const bonus = rankBonuses[idx] || 0;
-      const finalScore = p.score + bonus;
-      const newCumulativeScore = (p.cumulativeScore || 0) + bonus;
-      if (bonus > 0) {
-        const newAwards = [...(p as any).awards, { name: `${idx + 1}位`, description: '順位ボーナス', bonus }];
-        return {
-          ...p,
-          score: finalScore,
-          cumulativeScore: newCumulativeScore,
-          awards: newAwards,
-          title: calculateTitle(finalScore, tempPlayers.length) // Update title based on FINAL score (with all bonuses)
-        };
+      // Add Rank Bonus to awards list for display
+      if (rankBonus > 0) {
+        p.awards.push({ name: `${idx + 1}位`, description: '順位ボーナス', bonus: rankBonus });
       }
+
+      // Re-calculate Cumulative Score
+      // Previous cumulative (current p.cumulativeScore includes PREVIOUS rounds, 
+      // but in the original logic p.cumulativeScore was being updated in the map.
+      // Here, p is from currentPlayers which has the cumulative score UP TO NOW (before this round process started? 
+      // No, createTotalScore is called with tempPlayers from calculateAndShowResults where scoreHistory was just pushed.
+      // p.cumulativeScore in state is reliable?
+
+      // Let's recalculate cumulative from scoreHistory to be safe, but wait.
+      // scoreHistory contains RAW scores (scoreGain). It does NOT contain awards/rank bonuses from previous rounds.
+      // User said "Result announcement... rank score addition".
+      // If we only store raw scores in history, we lose previous awards/rank bonuses.
+      // So 'cumulativeScore' in Player state MUST serve as the source of truth for "Total Score So Far".
+
+      // HOWEVER, in step 1 of original logic:
+      // const newCumulativeScore = (p.cumulativeScore || 0) + latestRoundScore;
+      // This implies p.cumulativeScore passed in is "Score before this round".
+
+      // So:
+      // Final Cumulative = (Cumulative Before This Round) + (Final Round Score)
+      // Since p.cumulativeScore passed here might be "Before", we need to check caller.
+
+      // Caller: calculateAndShowResults -> players.map ... 
+      // In calculateAndShowResults:
+      // let tempPlayers = players.map(p => ... ) // p here is state before result calc.
+      // So p.cumulativeScore is valid "before this round".
+
+      const newCumulativeScore = (p.cumulativeScore || 0) + finalRoundScore;
+
       return {
         ...p,
-        score: finalScore,
+        score: finalRoundScore, // For display in ranking list (Current Round Total)
         cumulativeScore: newCumulativeScore,
-        title: calculateTitle(finalScore, tempPlayers.length) // Use final score for title
+        title: calculateTitle(newCumulativeScore, rankedPlayers.length)
       };
     });
 
-    return tempPlayers;
+    return rankedPlayers;
   };
 
   const calculateAndShowResults = (finalGuesses: Record<string, Record<string, number>>) => {
