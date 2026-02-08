@@ -32,6 +32,7 @@ export interface GameSettings {
     timerSeconds: number;
     includeNormalThemes: boolean;
     includeAbnormalThemes: boolean;
+    allowOriginalInAuto: boolean;
 }
 
 export const LobbyScreen: React.FC<LobbyScreenProps> = ({ roomId, players, myPlayerId, onStartGame, onUpdateColor, onLeave, isDebug = false, onAddNpc }) => {
@@ -48,7 +49,8 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ roomId, players, myPla
         isDiscussionEnabled: false,
         timerSeconds: 180,
         includeNormalThemes: true,
-        includeAbnormalThemes: false
+        includeAbnormalThemes: false,
+        allowOriginalInAuto: false
     });
 
     return (
@@ -211,7 +213,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ roomId, players, myPla
                         pointerEvents: settings.gameMode === 'AUTO' ? 'auto' : 'none'
                     }}>
                         <div style={{ fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#555' }}>ジャンル選択 (自動選出時)</div>
-                        <div style={{ display: 'flex', gap: '1rem' }}>
+                        <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.8rem' }}>
                             <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                                 <input
                                     type="checkbox"
@@ -227,6 +229,17 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({ roomId, players, myPla
                                     onChange={(e) => setSettings({ ...settings, includeAbnormalThemes: e.target.checked })}
                                 />
                                 <span style={{ marginLeft: '4px' }}>アブノーマル</span>
+                            </label>
+                        </div>
+
+                        <div style={{ borderTop: '1px solid #ddd', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={settings.allowOriginalInAuto}
+                                    onChange={(e) => setSettings({ ...settings, allowOriginalInAuto: e.target.checked })}
+                                />
+                                <span style={{ marginLeft: '4px', fontSize: '0.9rem' }}>オリジナルも入力可能にする (親入力)</span>
                             </label>
                         </div>
                     </div>

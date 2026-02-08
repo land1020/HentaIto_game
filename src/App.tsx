@@ -33,7 +33,8 @@ function App() {
     isDiscussionEnabled: false,
     timerSeconds: 180,
     includeNormalThemes: true,
-    includeAbnormalThemes: false
+    includeAbnormalThemes: false,
+    allowOriginalInAuto: false
   });
   const [roundCount, setRoundCount] = useState(0); // 0-indexed internally
 
@@ -955,6 +956,7 @@ function App() {
           candidates={themeCandidates}
           onSelect={handleThemeSelected}
           onLeave={handleLeaveGame}
+          allowOriginalInAuto={gameSettings.allowOriginalInAuto}
         />
       );
     case 'GAME':

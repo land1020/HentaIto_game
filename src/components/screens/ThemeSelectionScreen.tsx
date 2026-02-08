@@ -8,6 +8,7 @@ interface ThemeSelectionScreenProps {
     candidates: Theme[];
     onSelect: (theme: Theme) => void;
     onLeave: () => void;
+    allowOriginalInAuto?: boolean;
 }
 
 export const ThemeSelectionScreen: React.FC<ThemeSelectionScreenProps> = ({
@@ -16,7 +17,8 @@ export const ThemeSelectionScreen: React.FC<ThemeSelectionScreenProps> = ({
     gameMode,
     candidates,
     onSelect,
-    onLeave
+    onLeave,
+    allowOriginalInAuto = false
 }) => {
     const [customTheme, setCustomTheme] = useState<Theme>({ text: '', min: '弱い', max: '強い', genre: 'NORMAL' });
 
@@ -49,6 +51,7 @@ export const ThemeSelectionScreen: React.FC<ThemeSelectionScreenProps> = ({
         );
     }
 
+    // ORIGINAL Mode
     if (gameMode === 'ORIGINAL') {
         const isValid = customTheme.text.trim().length > 0 && customTheme.min.trim().length > 0 && customTheme.max.trim().length > 0;
         return (
@@ -122,11 +125,13 @@ export const ThemeSelectionScreen: React.FC<ThemeSelectionScreenProps> = ({
     }
 
     // AUTO Mode
+    const isCustomValid = customTheme.text.trim().length > 0 && customTheme.min.trim().length > 0 && customTheme.max.trim().length > 0;
+
     return (
         <div className="container">
             <h2 className="title">お題を選択</h2>
             <p style={{ textAlign: 'center', marginBottom: '2rem', color: '#666' }}>
-                どちらかのお題を選んでください
+                {allowOriginalInAuto ? '候補から選ぶか、下部でオリジナルのお題を入力してください' : 'どちらかのお題を選んでください'}
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -162,6 +167,58 @@ export const ThemeSelectionScreen: React.FC<ThemeSelectionScreenProps> = ({
                     </div>
                 ))}
             </div>
+
+            {/* Manual Input Section for Auto Mode if Enabled */}
+            {allowOriginalInAuto && (
+                <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '2px dashed #ddd' }}>
+                    <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: '#666' }}>または、オリジナルのお題を入力</h3>
+
+                    <div style={{ background: 'white', padding: '1.5rem', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-md)' }}>
+                        <div style={{ marginBottom: '1rem' }}>
+                            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem', fontSize: '0.9rem' }}>お題の内容</label>
+                            <input
+                                type="text"
+                                className="input-field"
+                                placeholder="例: 無人島に持っていきたいもの"
+                                value={customTheme.text}
+                                onChange={(e) => setCustomTheme({ ...customTheme, text: e.target.value })}
+                            />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <div style={{ flex: 1 }}>
+                                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem', fontSize: '0.9rem' }}>最小値 (0側)</label>
+                                <input
+                                    type="text"
+                                    className="input-field"
+                                    placeholder="例: いらない"
+                                    value={customTheme.min}
+                                    onChange={(e) => setCustomTheme({ ...customTheme, min: e.target.value })}
+                                />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem', fontSize: '0.9rem' }}>最大値 (100側)</label>
+                                <input
+                                    type="text"
+                                    className="input-field"
+                                    placeholder="例: 必須"
+                                    value={customTheme.max}
+                                    onChange={(e) => setCustomTheme({ ...customTheme, max: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <button
+                            className="btn-primary"
+                            style={{ width: '100%', marginTop: '1rem' }}
+                            disabled={!isCustomValid}
+                            onClick={() => onSelect(customTheme)}
+                        >
+                            入力したお題で決定
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <button
                 onClick={onLeave}
